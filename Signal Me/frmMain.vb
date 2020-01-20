@@ -293,12 +293,19 @@ Public Class frmMain
                         Dim optionStockList As Dictionary(Of String, OptionInstrumentDetails) = Await GetOptionStockList(cashStockName, Now.Date).ConfigureAwait(False)
                         If optionStockList IsNot Nothing AndAlso optionStockList.Count > 0 Then
                             Dim workingInstrument As InstrumentDetails = New InstrumentDetails With {
-                            .OriginatingInstrument = runningStock.Key,
-                            .CashTradingSymbol = cashStockName,
-                            .CashInstrumentToken = cashStockList(cashStockName),
-                            .OptionInstruments = optionStockList
-                        }
+                                    .OriginatingInstrument = runningStock.Key,
+                                    .CashTradingSymbol = cashStockName,
+                                    .CashInstrumentToken = cashStockList(cashStockName),
+                                    .OptionInstruments = optionStockList
+                                }
+
+                            If workableStockList Is Nothing Then workableStockList = New List(Of InstrumentDetails)
+                            workableStockList.Add(workingInstrument)
+                        Else
+                            Console.WriteLine(String.Format("2. {0}", cashStockName))
                         End If
+                    Else
+                        Console.WriteLine(String.Format("1. {0}", runningStock.Key))
                     End If
                 Next
             End If
@@ -509,7 +516,7 @@ Public Class frmMain
                     canceller.Token.ThrowIfCancellationRequested()
                     If Not IsDBNull(dt.Rows(i).Item(0)) AndAlso Not IsDBNull(dt.Rows(i).Item(1)) Then
                         If ret Is Nothing Then ret = New Dictionary(Of String, String)
-                        ret.Add(dt.Rows(i).Item(0), dt.Rows(i).Item(1))
+                        ret.Add(dt.Rows(i).Item(1), dt.Rows(i).Item(0))
                     End If
                 Next
             End If
@@ -527,6 +534,7 @@ Public Class frmMain
                                             FROM `active_instruments_futures`
                                             WHERE `TRADING_SYMBOL` LIKE '{0}%'
                                             AND `AS_ON_DATE`='{1}'
+                                            AND `SEGMENT`='NFO-OPT'
                                             AND `EXPIRY`=(SELECT MIN(`EXPIRY`)
                                             FROM `active_instruments_futures`
                                             WHERE `TRADING_SYMBOL` LIKE '{0}%'
