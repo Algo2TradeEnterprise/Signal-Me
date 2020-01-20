@@ -539,7 +539,7 @@ Public Class frmMain
                 Dim historicalCandlesDict As Dictionary(Of String, Object) = historicalCandlesJSONDict("data")
                 If historicalCandlesDict.ContainsKey("candles") AndAlso historicalCandlesDict("candles").count > 0 Then
                     Dim historicalCandles As ArrayList = historicalCandlesDict("candles")
-                    OnHeartbeat(String.Format("Generating Payload for {0}", tradingSymbol))
+                    'OnHeartbeat(String.Format("Generating Payload for {0}", tradingSymbol))
                     Dim previousPayload As Payload = Nothing
                     For Each historicalCandle As ArrayList In historicalCandles
                         canceller.Token.ThrowIfCancellationRequested()
