@@ -310,7 +310,18 @@ Public Class frmMain
                 Next
             End If
             If workableStockList IsNot Nothing AndAlso workableStockList.Count > 0 Then
+                Dim dt As DataTable = New DataTable
+                dt.Columns.Add("Intrument")
+                dt.Columns.Add("Close")
+                dt.Columns.Add("Sum Of Puts OI")
+                dt.Columns.Add("Sum Of Calls OI")
+                dt.Columns.Add("PCC")
+                dt.Columns.Add("CPC")
+
+                Dim ctr As Integer = 0
                 For Each runningStock In workableStockList
+                    ctr += 1
+                    OnHeartbeat(String.Format("Processing data for {0}. #{1}/{2}", runningStock.OriginatingInstrument, ctr, workableStockList.Count))
                     Dim eodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(runningStock.CashInstrumentToken, runningStock.CashTradingSymbol, Now.Date, Now.Date.AddDays(-15), DataType.EOD, Nothing)
                     If eodData IsNot Nothing AndAlso eodData.Count > 0 Then
                         runningStock.Open = eodData.LastOrDefault.Value.Open
@@ -325,10 +336,45 @@ Public Class frmMain
                             For Each runningOptionInstrument In runningStock.OptionInstruments
                                 Dim optionEodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(runningOptionInstrument.Value.TradingSymbol, runningOptionInstrument.Value.InstrumentToken, Now.Date, Now.Date, DataType.EOD, Nothing)
                                 If optionEodData IsNot Nothing AndAlso optionEodData.Count > 0 Then
-
+                                    If runningOptionInstrument.Value.InstrumentType = "PE" Then
+                                        If runningStock.PEInstrumentsPayloads Is Nothing Then runningStock.PEInstrumentsPayloads = New Dictionary(Of String, Payload)
+                                        runningStock.PEInstrumentsPayloads.Add(runningOptionInstrument.Value.StrikePrice, optionEodData.Values.LastOrDefault)
+                                    ElseIf runningOptionInstrument.Value.InstrumentType = "CE" Then
+                                        If runningStock.CEInstrumentsPayloads Is Nothing Then runningStock.CEInstrumentsPayloads = New Dictionary(Of String, Payload)
+                                        runningStock.CEInstrumentsPayloads.Add(runningOptionInstrument.Value.StrikePrice, optionEodData.Values.LastOrDefault)
+                                    End If
                                 End If
                             Next
                         End If
+
+                        If runningStock.PEInstrumentsPayloads IsNot Nothing AndAlso runningStock.PEInstrumentsPayloads.Count > 0 Then
+                            runningStock.SumOfPutsOI = runningStock.PEInstrumentsPayloads.Sum(Function(x)
+                                                                                                  If CDec(x.Key) < runningStock.Close Then
+                                                                                                      Return x.Value.OI
+                                                                                                  Else
+                                                                                                      Return 0
+                                                                                                  End If
+                                                                                              End Function)
+                        End If
+
+                        If runningStock.CEInstrumentsPayloads IsNot Nothing AndAlso runningStock.CEInstrumentsPayloads.Count > 0 Then
+                            runningStock.SumOfCallsOI = runningStock.CEInstrumentsPayloads.Sum(Function(x)
+                                                                                                   If CDec(x.Key) > runningStock.Close Then
+                                                                                                       Return x.Value.OI
+                                                                                                   Else
+                                                                                                       Return 0
+                                                                                                   End If
+                                                                                               End Function)
+                        End If
+
+                        Dim row As DataRow = dt.NewRow
+                        row("Intrument") = runningStock.OriginatingInstrument
+                        row("Close") = runningStock.Close
+                        row("Sum Of Puts OI") = runningStock.SumOfPutsOI
+                        row("Sum Of Calls OI") = runningStock.SumOfCallsOI
+                        row("PCC") = runningStock.PCC
+                        row("CPC") = runningStock.CPC
+                        dt.Rows.Add(row)
                     End If
                 Next
             End If
