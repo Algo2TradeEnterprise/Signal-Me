@@ -334,16 +334,20 @@ Public Class frmMain
 
                         If runningStock.OptionInstruments IsNot Nothing AndAlso runningStock.OptionInstruments.Count > 0 Then
                             For Each runningOptionInstrument In runningStock.OptionInstruments
-                                Dim optionEodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(runningOptionInstrument.Value.TradingSymbol, runningOptionInstrument.Value.InstrumentToken, Now.Date, Now.Date, DataType.EOD, Nothing)
-                                If optionEodData IsNot Nothing AndAlso optionEodData.Count > 0 Then
-                                    If runningOptionInstrument.Value.InstrumentType = "PE" Then
-                                        If runningStock.PEInstrumentsPayloads Is Nothing Then runningStock.PEInstrumentsPayloads = New Dictionary(Of String, Payload)
-                                        runningStock.PEInstrumentsPayloads.Add(runningOptionInstrument.Value.StrikePrice, optionEodData.Values.LastOrDefault)
-                                    ElseIf runningOptionInstrument.Value.InstrumentType = "CE" Then
-                                        If runningStock.CEInstrumentsPayloads Is Nothing Then runningStock.CEInstrumentsPayloads = New Dictionary(Of String, Payload)
-                                        runningStock.CEInstrumentsPayloads.Add(runningOptionInstrument.Value.StrikePrice, optionEodData.Values.LastOrDefault)
+                                Try
+                                    Dim optionEodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(runningOptionInstrument.Value.TradingSymbol, runningOptionInstrument.Value.InstrumentToken, Now.Date, Now.Date, DataType.EOD, Nothing)
+                                    If optionEodData IsNot Nothing AndAlso optionEodData.Count > 0 Then
+                                        If runningOptionInstrument.Value.InstrumentType = "PE" Then
+                                            If runningStock.PEInstrumentsPayloads Is Nothing Then runningStock.PEInstrumentsPayloads = New Dictionary(Of String, Payload)
+                                            runningStock.PEInstrumentsPayloads.Add(runningOptionInstrument.Value.StrikePrice, optionEodData.Values.LastOrDefault)
+                                        ElseIf runningOptionInstrument.Value.InstrumentType = "CE" Then
+                                            If runningStock.CEInstrumentsPayloads Is Nothing Then runningStock.CEInstrumentsPayloads = New Dictionary(Of String, Payload)
+                                            runningStock.CEInstrumentsPayloads.Add(runningOptionInstrument.Value.StrikePrice, optionEodData.Values.LastOrDefault)
+                                        End If
                                     End If
-                                End If
+                                Catch ex As Exception
+                                    Throw ex
+                                End Try
                             Next
                         End If
 
