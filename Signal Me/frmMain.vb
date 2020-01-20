@@ -555,12 +555,12 @@ Public Class frmMain
 
             Dim queryString As String = "SELECT `INSTRUMENT_TOKEN`,`TRADING_SYMBOL`,`EXPIRY`
                                             FROM `active_instruments_futures`
-                                            WHERE `TRADING_SYMBOL` LIKE '{0}%'
+                                            WHERE `TRADING_SYMBOL` REGEXP '^{0}[0-9][0-9]*'
                                             AND `AS_ON_DATE`='{1}'
                                             AND `SEGMENT`='NFO-OPT'
                                             AND `EXPIRY`=(SELECT MIN(`EXPIRY`)
                                             FROM `active_instruments_futures`
-                                            WHERE `TRADING_SYMBOL` LIKE '{0}%'
+                                            WHERE `TRADING_SYMBOL` REGEXP '^{0}[0-9][0-9]*'
                                             AND `AS_ON_DATE`='{1}')"
             queryString = String.Format(queryString, instrumentName, tradingDate.ToString("yyyy-MM-dd"))
 
