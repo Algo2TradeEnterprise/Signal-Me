@@ -322,7 +322,7 @@ Public Class frmMain
                 For Each runningStock In workableStockList
                     ctr += 1
                     OnHeartbeat(String.Format("Processing data for {0}. #{1}/{2}", runningStock.OriginatingInstrument, ctr, workableStockList.Count))
-                    Dim eodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(runningStock.CashInstrumentToken, runningStock.CashTradingSymbol, Now.Date, Now.Date.AddDays(-15), DataType.EOD, Nothing)
+                    Dim eodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(runningStock.CashInstrumentToken, runningStock.CashTradingSymbol, Now.Date.AddDays(-15), Now.Date, DataType.EOD, Nothing)
                     If eodData IsNot Nothing AndAlso eodData.Count > 0 Then
                         runningStock.Open = eodData.LastOrDefault.Value.Open
                         runningStock.Low = eodData.LastOrDefault.Value.Low
