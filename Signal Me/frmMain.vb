@@ -585,7 +585,7 @@ Public Class frmMain
                                 concatStr = expiry.ToString("yyMdd")
                             End If
                         End If
-                        Dim prefix As String = String.Format("{0}{1}", instrumentName, concatStr)
+                        Dim prefix As String = String.Format("{0}{1}", instrumentName, concatStr.ToUpper)
                         Dim instrumentType As String = Microsoft.VisualBasic.Right(tradingSymbol, 2)
                         Dim strikePrice As String = Utilities.Strings.GetTextBetween(prefix, instrumentType, tradingSymbol)
                         If IsNumeric(strikePrice) Then
