@@ -4,6 +4,7 @@ Imports Utilities.DAL
 Imports Utilities.Network
 Imports System.Net
 Imports System.Net.Http
+Imports System.Text.RegularExpressions
 
 Public Class frmMain
 
@@ -290,7 +291,7 @@ Public Class frmMain
                     If runningStock.Key = "BANKNIFTY" Then cashStockName = "NIFTY BANK"
                     If runningStock.Key = "NIFTY" Then cashStockName = "NIFTY 50"
                     If cashStockList.ContainsKey(cashStockName) Then
-                        Dim optionStockList As Dictionary(Of String, OptionInstrumentDetails) = Await GetOptionStockList(cashStockName, Now.Date).ConfigureAwait(False)
+                        Dim optionStockList As Dictionary(Of String, OptionInstrumentDetails) = Await GetOptionStockList(runningStock.Key, Now.Date).ConfigureAwait(False)
                         If optionStockList IsNot Nothing AndAlso optionStockList.Count > 0 Then
                             Dim workingInstrument As InstrumentDetails = New InstrumentDetails With {
                             .OriginatingInstrument = runningStock.Key,
@@ -464,8 +465,12 @@ Public Class frmMain
                     If Not IsDBNull(dt.Rows(i).Item(0)) AndAlso Not IsDBNull(dt.Rows(i).Item(1)) Then
                         Dim tradingSymbol As String = dt.Rows(i).Item(0).ToString.ToUpper
                         Dim expiry As Date = Convert.ToDateTime(dt.Rows(i).Item(1))
-                        If allStock Is Nothing Then allStock = New Dictionary(Of String, Date)
-                        allStock.Add(tradingSymbol, expiry)
+
+                        Dim pattern As String = "([0-9][0-9]JAN)|([0-9][0-9]FEB)|([0-9][0-9]MAR)|([0-9][0-9]APR)|([0-9][0-9]MAY)|([0-9][0-9]JUN)|([0-9][0-9]JUL)|([0-9][0-9]AUG)|([0-9][0-9]SEP)|([0-9][0-9]OCT)|([0-9][0-9]NOV)|([0-9][0-9]DEC)"
+                        If Regex.Matches(tradingSymbol, pattern).Count <= 1 Then
+                            If allStock Is Nothing Then allStock = New Dictionary(Of String, Date)
+                            allStock.Add(tradingSymbol, expiry)
+                        End If
                     End If
                 Next
                 If allStock IsNot Nothing AndAlso allStock.Count > 0 Then
