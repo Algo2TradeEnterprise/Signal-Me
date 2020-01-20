@@ -456,7 +456,7 @@ Public Class frmMain
         End Select
         If ZerodhaHistoricalURL IsNot Nothing AndAlso instrumentToken IsNot Nothing AndAlso instrumentToken <> "" Then
             Dim historicalDataURL As String = String.Format(ZerodhaHistoricalURL, instrumentToken, startDate.ToString("yyyy-MM-dd"), endDate.ToString("yyyy-MM-dd"))
-            OnHeartbeat(String.Format("Fetching historical Data: {0}", historicalDataURL))
+            'OnHeartbeat(String.Format("Fetching historical Data: {0}", historicalDataURL))
             Dim historicalCandlesJSONDict As Dictionary(Of String, Object) = Nothing
 
             ServicePointManager.Expect100Continue = False
