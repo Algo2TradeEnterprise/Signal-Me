@@ -266,6 +266,12 @@ Public Class frmMain
     End Sub
 
     Private Async Sub btnStart_Click(sender As Object, e As EventArgs) Handles btnStart.Click
+        Dim symbol As String = "BANKNIFTY2012328100CE"
+        Dim expiry As Date = New Date(2020, 10, 23, 0, 0, 0)
+
+
+
+
         SetObjectEnableDisable_ThreadSafe(btnStart, False)
         SetObjectEnableDisable_ThreadSafe(btnStop, True)
         SetObjectEnableDisable_ThreadSafe(grpMode, False)
@@ -291,7 +297,7 @@ Public Class frmMain
                     If runningStock.Key = "BANKNIFTY" Then cashStockName = "NIFTY BANK"
                     If runningStock.Key = "NIFTY" Then cashStockName = "NIFTY 50"
                     If cashStockList.ContainsKey(cashStockName) Then
-                        Dim optionStockList As Dictionary(Of String, OptionInstrumentDetails) = Await GetOptionStockList(runningStock.Key, Now.Date).ConfigureAwait(False)
+                        Dim optionStockList As Dictionary(Of String, OptionInstrumentDetails) = Await GetOptionStockList(runningStock.Key, Now.Date, runningStock.Value).ConfigureAwait(False)
                         If optionStockList IsNot Nothing AndAlso optionStockList.Count > 0 Then
                             Dim workingInstrument As InstrumentDetails = New InstrumentDetails With {
                                     .OriginatingInstrument = runningStock.Key,
@@ -302,16 +308,32 @@ Public Class frmMain
 
                             If workableStockList Is Nothing Then workableStockList = New List(Of InstrumentDetails)
                             workableStockList.Add(workingInstrument)
-                        Else
-                            Console.WriteLine(String.Format("2. {0}", cashStockName))
                         End If
-                    Else
-                        Console.WriteLine(String.Format("1. {0}", runningStock.Key))
                     End If
                 Next
             End If
             If workableStockList IsNot Nothing AndAlso workableStockList.Count > 0 Then
+                For Each runningStock In workableStockList
+                    Dim eodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(runningStock.CashInstrumentToken, runningStock.CashTradingSymbol, Now.Date, Now.Date.AddDays(-15), DataType.EOD, Nothing)
+                    If eodData IsNot Nothing AndAlso eodData.Count > 0 Then
+                        runningStock.Open = eodData.LastOrDefault.Value.Open
+                        runningStock.Low = eodData.LastOrDefault.Value.Low
+                        runningStock.High = eodData.LastOrDefault.Value.High
+                        runningStock.Close = eodData.LastOrDefault.Value.Close
+                        runningStock.Volume = eodData.LastOrDefault.Value.Volume
+                        runningStock.LTP = eodData.LastOrDefault.Value.Close
+                        runningStock.PreviousClose = eodData.LastOrDefault.Value.PreviousPayload.Close
 
+                        If runningStock.OptionInstruments IsNot Nothing AndAlso runningStock.OptionInstruments.Count > 0 Then
+                            For Each runningOptionInstrument In runningStock.OptionInstruments
+                                Dim optionEodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(runningOptionInstrument.Value.TradingSymbol, runningOptionInstrument.Value.InstrumentToken, Now.Date, Now.Date, DataType.EOD, Nothing)
+                                If optionEodData IsNot Nothing AndAlso optionEodData.Count > 0 Then
+
+                                End If
+                            Next
+                        End If
+                    End If
+                Next
             End If
         Catch cex As OperationCanceledException
             MsgBox(cex.Message)
@@ -395,7 +417,7 @@ Public Class frmMain
                     RemoveHandler browser.WaitingFor, AddressOf OnWaitingFor
                     RemoveHandler browser.DocumentRetryStatus, AddressOf OnDocumentRetryStatus
                 End Using
-            ElseIf GetRadioButtonChecked_ThreadSafe(rdbWithoutAPI) Then
+            ElseIf GetRadioButtonChecked_ThreadSafe(rdbWithoutAPI) OrElse GetRadioButtonChecked_ThreadSafe(rdbFromFile) Then
                 Dim proxyToBeUsed As HttpProxy = Nothing
                 Using browser As New HttpBrowser(proxyToBeUsed, Net.DecompressionMethods.GZip, New TimeSpan(0, 1, 0), canceller)
                     AddHandler browser.DocumentDownloadComplete, AddressOf OnDocumentDownloadComplete
@@ -444,9 +466,11 @@ Public Class frmMain
                             .Close = historicalCandle(4)
                             .Volume = historicalCandle(5)
                             .OI = historicalCandle(6)
+                            .PreviousPayload = previousPayload
                         End With
                         If ret Is Nothing Then ret = New Dictionary(Of Date, Payload)
                         ret.Add(runningSnapshotTime, runningPayload)
+                        previousPayload = runningPayload
                     Next
                 End If
             End If
@@ -529,7 +553,7 @@ Public Class frmMain
         Return ret
     End Function
 
-    Public Async Function GetOptionStockList(ByVal instrumentName As String, ByVal tradingDate As Date) As Task(Of Dictionary(Of String, OptionInstrumentDetails))
+    Public Async Function GetOptionStockList(ByVal instrumentName As String, ByVal tradingDate As Date, ByVal mainInstrumentExpiry As Date) As Task(Of Dictionary(Of String, OptionInstrumentDetails))
         Dim ret As Dictionary(Of String, OptionInstrumentDetails) = Nothing
 
         Using sqlHlpr As New MySQLDBHelper(My.Settings.ServerName, "local_stock", "3306", "rio", "speech123", canceller)
@@ -556,7 +580,8 @@ Public Class frmMain
                         Dim optionInstrument As OptionInstrumentDetails = New OptionInstrumentDetails With {
                             .InstrumentToken = dt.Rows(i).Item(0),
                             .TradingSymbol = dt.Rows(i).Item(1),
-                            .Expiry = Convert.ToDateTime(dt.Rows(i).Item(2))
+                            .Expiry = Convert.ToDateTime(dt.Rows(i).Item(2)),
+                            .OriginatingInstrumentExpiry = mainInstrumentExpiry
                         }
 
                         If ret Is Nothing Then ret = New Dictionary(Of String, OptionInstrumentDetails)

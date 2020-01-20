@@ -7,4 +7,5 @@
     Public Property Volume As Long
     Public Property OI As Double
     Public Property PayloadDate As Date
+    Public Property PreviousPayload As Payload
 End Class
