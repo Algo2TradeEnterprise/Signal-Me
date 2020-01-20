@@ -266,12 +266,6 @@ Public Class frmMain
     End Sub
 
     Private Async Sub btnStart_Click(sender As Object, e As EventArgs) Handles btnStart.Click
-        Dim symbol As String = "BANKNIFTY2012328100CE"
-        Dim expiry As Date = New Date(2020, 10, 23, 0, 0, 0)
-
-
-
-
         SetObjectEnableDisable_ThreadSafe(btnStart, False)
         SetObjectEnableDisable_ThreadSafe(btnStop, True)
         SetObjectEnableDisable_ThreadSafe(grpMode, False)
@@ -577,15 +571,35 @@ Public Class frmMain
                 For i = 0 To dt.Rows.Count - 1
                     canceller.Token.ThrowIfCancellationRequested()
                     If Not IsDBNull(dt.Rows(i).Item(0)) AndAlso Not IsDBNull(dt.Rows(i).Item(1)) AndAlso Not IsDBNull(dt.Rows(i).Item(2)) Then
-                        Dim optionInstrument As OptionInstrumentDetails = New OptionInstrumentDetails With {
-                            .InstrumentToken = dt.Rows(i).Item(0),
-                            .TradingSymbol = dt.Rows(i).Item(1),
-                            .Expiry = Convert.ToDateTime(dt.Rows(i).Item(2)),
-                            .OriginatingInstrumentExpiry = mainInstrumentExpiry
-                        }
+                        Dim tradingSymbol As String = dt.Rows(i).Item(1)
+                        Dim expiry As Date = Convert.ToDateTime(dt.Rows(i).Item(2))
+                        Dim concatStr As String = Nothing
+                        If mainInstrumentExpiry <> Date.MinValue AndAlso mainInstrumentExpiry = expiry Then
+                            'Monthly
+                            concatStr = expiry.ToString("yyMMM")
+                        Else
+                            'Weekly
+                            If expiry.Month > 9 Then
+                                concatStr = String.Format("{0}{1}{2}", expiry.ToString("yy"), Microsoft.VisualBasic.Left(expiry.ToString("MMM"), 1), expiry.ToString("dd"))
+                            Else
+                                concatStr = expiry.ToString("yyMdd")
+                            End If
+                        End If
+                        Dim prefix As String = String.Format("{0}{1}", instrumentName, concatStr)
+                        Dim instrumentType As String = Microsoft.VisualBasic.Right(tradingSymbol, 2)
+                        Dim strikePrice As String = Utilities.Strings.GetTextBetween(prefix, instrumentType, tradingSymbol)
+                        If IsNumeric(strikePrice) Then
+                            Dim optionInstrument As OptionInstrumentDetails = New OptionInstrumentDetails With {
+                                        .InstrumentToken = dt.Rows(i).Item(0),
+                                        .TradingSymbol = tradingSymbol,
+                                        .Expiry = expiry,
+                                        .InstrumentType = instrumentType,
+                                        .StrikePrice = strikePrice
+                                    }
 
-                        If ret Is Nothing Then ret = New Dictionary(Of String, OptionInstrumentDetails)
-                        ret.Add(optionInstrument.TradingSymbol, optionInstrument)
+                            If ret Is Nothing Then ret = New Dictionary(Of String, OptionInstrumentDetails)
+                            ret.Add(optionInstrument.TradingSymbol, optionInstrument)
+                        End If
                     End If
                 Next
             End If
