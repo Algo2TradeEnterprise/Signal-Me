@@ -282,9 +282,10 @@ Public Class frmMain
 
     Private Async Function StartProcessingAsync() As Task
         Try
+            Dim tradingDate As Date = GetDateTimePickerValue_ThreadSafe(dtpckrTradingDate)
             Dim workableStockList As List(Of InstrumentDetails) = Nothing
-            Dim allStockList As Dictionary(Of String, Date) = Await GetFutureStockListAsync(Now.Date).ConfigureAwait(False)
-            Dim cashStockList As Dictionary(Of String, String) = Await GetCashStockListAsync(Now.Date).ConfigureAwait(False)
+            Dim allStockList As Dictionary(Of String, Date) = Await GetFutureStockListAsync(tradingDate.Date).ConfigureAwait(False)
+            Dim cashStockList As Dictionary(Of String, String) = Await GetCashStockListAsync(tradingDate.Date).ConfigureAwait(False)
             If allStockList IsNot Nothing AndAlso allStockList.Count > 0 Then
                 Dim ctr As Integer = 0
                 For Each runningStock In allStockList
@@ -294,7 +295,7 @@ Public Class frmMain
                     If runningStock.Key = "BANKNIFTY" Then cashStockName = "NIFTY BANK"
                     If runningStock.Key = "NIFTY" Then cashStockName = "NIFTY 50"
                     If cashStockList.ContainsKey(cashStockName) Then
-                        Dim optionStockList As Dictionary(Of String, OptionInstrumentDetails) = Await GetOptionStockListAsync(runningStock.Key, Now.Date, runningStock.Value).ConfigureAwait(False)
+                        Dim optionStockList As Dictionary(Of String, OptionInstrumentDetails) = Await GetOptionStockListAsync(runningStock.Key, tradingDate.Date, runningStock.Value).ConfigureAwait(False)
                         If optionStockList IsNot Nothing AndAlso optionStockList.Count > 0 Then
                             Dim workingInstrument As InstrumentDetails = New InstrumentDetails With {
                                     .OriginatingInstrument = runningStock.Key,
@@ -312,17 +313,25 @@ Public Class frmMain
             If workableStockList IsNot Nothing AndAlso workableStockList.Count > 0 Then
                 Dim dt As DataTable = New DataTable
                 dt.Columns.Add("Intrument")
+                dt.Columns.Add("Open")
+                dt.Columns.Add("Low")
+                dt.Columns.Add("High")
                 dt.Columns.Add("Close")
+                dt.Columns.Add("Volume")
+                dt.Columns.Add("LTP")
+                dt.Columns.Add("Change %")
                 dt.Columns.Add("Sum Of Puts OI")
                 dt.Columns.Add("Sum Of Calls OI")
-                dt.Columns.Add("PCC")
-                dt.Columns.Add("CPC")
+                dt.Columns.Add("PCC %")
+                dt.Columns.Add("CPC %")
+                dt.Columns.Add("PTR %")
+                dt.Columns.Add("CTR %")
 
                 Dim ctr As Integer = 0
                 For Each runningStock In workableStockList
                     ctr += 1
                     OnHeartbeat(String.Format("Processing data for {0}. #{1}/{2}", runningStock.OriginatingInstrument, ctr, workableStockList.Count))
-                    Dim eodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(runningStock.CashInstrumentToken, runningStock.CashTradingSymbol, Now.Date.AddDays(-15), Now.Date, DataType.EOD, Nothing)
+                    Dim eodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(runningStock.CashInstrumentToken, runningStock.CashTradingSymbol, tradingDate.Date.AddDays(-15), tradingDate.Date, DataType.EOD, Nothing)
                     If eodData IsNot Nothing AndAlso eodData.Count > 0 Then
                         runningStock.Open = eodData.LastOrDefault.Value.Open
                         runningStock.Low = eodData.LastOrDefault.Value.Low
@@ -333,26 +342,14 @@ Public Class frmMain
                         runningStock.PreviousClose = eodData.LastOrDefault.Value.PreviousPayload.Close
 
                         If runningStock.OptionInstruments IsNot Nothing AndAlso runningStock.OptionInstruments.Count > 0 Then
-                            'For Each runningOptionInstrument In runningStock.OptionInstruments
-                            '    Dim optionEodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(runningOptionInstrument.Value.InstrumentToken, runningOptionInstrument.Value.TradingSymbol, Now.Date, Now.Date, DataType.EOD, Nothing)
-                            '    If optionEodData IsNot Nothing AndAlso optionEodData.Count > 0 Then
-                            '        If runningOptionInstrument.Value.InstrumentType = "PE" Then
-                            '            If runningStock.PEInstrumentsPayloads Is Nothing Then runningStock.PEInstrumentsPayloads = New Dictionary(Of String, Payload)
-                            '            runningStock.PEInstrumentsPayloads.Add(runningOptionInstrument.Value.StrikePrice, optionEodData.Values.LastOrDefault)
-                            '        ElseIf runningOptionInstrument.Value.InstrumentType = "CE" Then
-                            '            If runningStock.CEInstrumentsPayloads Is Nothing Then runningStock.CEInstrumentsPayloads = New Dictionary(Of String, Payload)
-                            '            runningStock.CEInstrumentsPayloads.Add(runningOptionInstrument.Value.StrikePrice, optionEodData.Values.LastOrDefault)
-                            '        End If
-                            '    End If
-                            'Next
                             Try
-                                For i As Integer = 0 To runningStock.OptionInstruments.Count - 1 Step 50
+                                For i As Integer = 0 To runningStock.OptionInstruments.Count - 1 Step 100
                                     canceller.Token.ThrowIfCancellationRequested()
-                                    Dim numberOfData As Integer = If(runningStock.OptionInstruments.Count - i > 50, 50, runningStock.OptionInstruments.Count - i)
+                                    Dim numberOfData As Integer = If(runningStock.OptionInstruments.Count - i > 100, 100, runningStock.OptionInstruments.Count - i)
                                     Dim tasks As IEnumerable(Of Task(Of Boolean)) = Nothing
                                     tasks = runningStock.OptionInstruments.Values.ToList.GetRange(i, numberOfData).Select(Async Function(x)
                                                                                                                               Try
-                                                                                                                                  Await GetDataAsync(runningStock, x)
+                                                                                                                                  Await GetDataAsync(runningStock, x, tradingDate).ConfigureAwait(False)
                                                                                                                               Catch ex As Exception
                                                                                                                                   Throw ex
                                                                                                                               End Try
@@ -396,11 +393,20 @@ Public Class frmMain
 
                         Dim row As DataRow = dt.NewRow
                         row("Intrument") = runningStock.OriginatingInstrument
+                        row("Open") = runningStock.Open
+                        row("Low") = runningStock.Low
+                        row("High") = runningStock.High
                         row("Close") = runningStock.Close
+                        row("Volume") = runningStock.Volume
+                        row("LTP") = runningStock.LTP
+                        row("Change %") = runningStock.ChangePer
                         row("Sum Of Puts OI") = runningStock.SumOfPutsOI
                         row("Sum Of Calls OI") = runningStock.SumOfCallsOI
-                        row("PCC") = runningStock.PCC
-                        row("CPC") = runningStock.CPC
+                        row("PCC %") = runningStock.PCC
+                        row("CPC %") = runningStock.CPC
+                        row("PTR %") = runningStock.PTR
+                        row("CTR %") = runningStock.CTR
+
                         dt.Rows.Add(row)
                     End If
                 Next
@@ -419,8 +425,8 @@ Public Class frmMain
         End Try
     End Function
 
-    Private Async Function GetDataAsync(ByVal originatingInstrument As InstrumentDetails, ByVal optionInstrument As OptionInstrumentDetails) As Task
-        Dim optionEodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(optionInstrument.InstrumentToken, optionInstrument.TradingSymbol, Now.Date, Now.Date, DataType.EOD, Nothing)
+    Private Async Function GetDataAsync(ByVal originatingInstrument As InstrumentDetails, ByVal optionInstrument As OptionInstrumentDetails, ByVal tradingDate As Date) As Task
+        Dim optionEodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(optionInstrument.InstrumentToken, optionInstrument.TradingSymbol, tradingDate.Date, tradingDate.Date, DataType.EOD, Nothing)
         If optionEodData IsNot Nothing AndAlso optionEodData.Count > 0 Then
             If optionInstrument.InstrumentType = "PE" Then
                 If originatingInstrument.PEInstrumentsPayloads Is Nothing Then originatingInstrument.PEInstrumentsPayloads = New Concurrent.ConcurrentDictionary(Of String, Payload)
