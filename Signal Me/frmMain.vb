@@ -286,7 +286,10 @@ Public Class frmMain
             Dim allStockList As Dictionary(Of String, Date) = Await GetFutureStockList(Now.Date).ConfigureAwait(False)
             Dim cashStockList As Dictionary(Of String, String) = Await GetCashStockList(Now.Date).ConfigureAwait(False)
             If allStockList IsNot Nothing AndAlso allStockList.Count > 0 Then
+                Dim ctr As Integer = 0
                 For Each runningStock In allStockList
+                    ctr += 1
+                    OnHeartbeat(String.Format("Getting option stocklist for {0}. #{1}/{2}", runningStock.Key, ctr, allStockList.Count))
                     Dim cashStockName As String = runningStock.Key
                     If runningStock.Key = "BANKNIFTY" Then cashStockName = "NIFTY BANK"
                     If runningStock.Key = "NIFTY" Then cashStockName = "NIFTY 50"
@@ -551,7 +554,7 @@ Public Class frmMain
         Dim ret As Dictionary(Of String, OptionInstrumentDetails) = Nothing
 
         Using sqlHlpr As New MySQLDBHelper(My.Settings.ServerName, "local_stock", "3306", "rio", "speech123", canceller)
-            AddHandler sqlHlpr.Heartbeat, AddressOf OnHeartbeat
+            'AddHandler sqlHlpr.Heartbeat, AddressOf OnHeartbeat
 
             Dim queryString As String = "SELECT `INSTRUMENT_TOKEN`,`TRADING_SYMBOL`,`EXPIRY`
                                             FROM `active_instruments_futures`
