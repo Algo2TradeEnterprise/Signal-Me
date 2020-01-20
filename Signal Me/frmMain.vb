@@ -334,7 +334,7 @@ Public Class frmMain
 
                         If runningStock.OptionInstruments IsNot Nothing AndAlso runningStock.OptionInstruments.Count > 0 Then
                             'For Each runningOptionInstrument In runningStock.OptionInstruments
-                            '    Dim optionEodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(runningOptionInstrument.Value.TradingSymbol, runningOptionInstrument.Value.InstrumentToken, Now.Date, Now.Date, DataType.EOD, Nothing)
+                            '    Dim optionEodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(runningOptionInstrument.Value.InstrumentToken, runningOptionInstrument.Value.TradingSymbol, Now.Date, Now.Date, DataType.EOD, Nothing)
                             '    If optionEodData IsNot Nothing AndAlso optionEodData.Count > 0 Then
                             '        If runningOptionInstrument.Value.InstrumentType = "PE" Then
                             '            If runningStock.PEInstrumentsPayloads Is Nothing Then runningStock.PEInstrumentsPayloads = New Dictionary(Of String, Payload)
@@ -420,7 +420,7 @@ Public Class frmMain
     End Function
 
     Private Async Function GetDataAsync(ByVal originatingInstrument As InstrumentDetails, ByVal optionInstrument As OptionInstrumentDetails) As Task
-        Dim optionEodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(optionInstrument.TradingSymbol, optionInstrument.InstrumentToken, Now.Date, Now.Date, DataType.EOD, Nothing)
+        Dim optionEodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(optionInstrument.InstrumentToken, optionInstrument.TradingSymbol, Now.Date, Now.Date, DataType.EOD, Nothing)
         If optionEodData IsNot Nothing AndAlso optionEodData.Count > 0 Then
             If optionInstrument.InstrumentType = "PE" Then
                 If originatingInstrument.PEInstrumentsPayloads Is Nothing Then originatingInstrument.PEInstrumentsPayloads = New Concurrent.ConcurrentDictionary(Of String, Payload)
