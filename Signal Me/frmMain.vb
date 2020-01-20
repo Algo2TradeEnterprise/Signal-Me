@@ -283,8 +283,8 @@ Public Class frmMain
     Private Async Function StartProcessingAsync() As Task
         Try
             Dim workableStockList As List(Of InstrumentDetails) = Nothing
-            Dim allStockList As Dictionary(Of String, Date) = Await GetFutureStockList(Now.Date).ConfigureAwait(False)
-            Dim cashStockList As Dictionary(Of String, String) = Await GetCashStockList(Now.Date).ConfigureAwait(False)
+            Dim allStockList As Dictionary(Of String, Date) = Await GetFutureStockListAsync(Now.Date).ConfigureAwait(False)
+            Dim cashStockList As Dictionary(Of String, String) = Await GetCashStockListAsync(Now.Date).ConfigureAwait(False)
             If allStockList IsNot Nothing AndAlso allStockList.Count > 0 Then
                 Dim ctr As Integer = 0
                 For Each runningStock In allStockList
@@ -294,7 +294,7 @@ Public Class frmMain
                     If runningStock.Key = "BANKNIFTY" Then cashStockName = "NIFTY BANK"
                     If runningStock.Key = "NIFTY" Then cashStockName = "NIFTY 50"
                     If cashStockList.ContainsKey(cashStockName) Then
-                        Dim optionStockList As Dictionary(Of String, OptionInstrumentDetails) = Await GetOptionStockList(runningStock.Key, Now.Date, runningStock.Value).ConfigureAwait(False)
+                        Dim optionStockList As Dictionary(Of String, OptionInstrumentDetails) = Await GetOptionStockListAsync(runningStock.Key, Now.Date, runningStock.Value).ConfigureAwait(False)
                         If optionStockList IsNot Nothing AndAlso optionStockList.Count > 0 Then
                             Dim workingInstrument As InstrumentDetails = New InstrumentDetails With {
                                     .OriginatingInstrument = runningStock.Key,
@@ -333,22 +333,45 @@ Public Class frmMain
                         runningStock.PreviousClose = eodData.LastOrDefault.Value.PreviousPayload.Close
 
                         If runningStock.OptionInstruments IsNot Nothing AndAlso runningStock.OptionInstruments.Count > 0 Then
-                            For Each runningOptionInstrument In runningStock.OptionInstruments
-                                Try
-                                    Dim optionEodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(runningOptionInstrument.Value.TradingSymbol, runningOptionInstrument.Value.InstrumentToken, Now.Date, Now.Date, DataType.EOD, Nothing)
-                                    If optionEodData IsNot Nothing AndAlso optionEodData.Count > 0 Then
-                                        If runningOptionInstrument.Value.InstrumentType = "PE" Then
-                                            If runningStock.PEInstrumentsPayloads Is Nothing Then runningStock.PEInstrumentsPayloads = New Dictionary(Of String, Payload)
-                                            runningStock.PEInstrumentsPayloads.Add(runningOptionInstrument.Value.StrikePrice, optionEodData.Values.LastOrDefault)
-                                        ElseIf runningOptionInstrument.Value.InstrumentType = "CE" Then
-                                            If runningStock.CEInstrumentsPayloads Is Nothing Then runningStock.CEInstrumentsPayloads = New Dictionary(Of String, Payload)
-                                            runningStock.CEInstrumentsPayloads.Add(runningOptionInstrument.Value.StrikePrice, optionEodData.Values.LastOrDefault)
-                                        End If
+                            'For Each runningOptionInstrument In runningStock.OptionInstruments
+                            '    Dim optionEodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(runningOptionInstrument.Value.TradingSymbol, runningOptionInstrument.Value.InstrumentToken, Now.Date, Now.Date, DataType.EOD, Nothing)
+                            '    If optionEodData IsNot Nothing AndAlso optionEodData.Count > 0 Then
+                            '        If runningOptionInstrument.Value.InstrumentType = "PE" Then
+                            '            If runningStock.PEInstrumentsPayloads Is Nothing Then runningStock.PEInstrumentsPayloads = New Dictionary(Of String, Payload)
+                            '            runningStock.PEInstrumentsPayloads.Add(runningOptionInstrument.Value.StrikePrice, optionEodData.Values.LastOrDefault)
+                            '        ElseIf runningOptionInstrument.Value.InstrumentType = "CE" Then
+                            '            If runningStock.CEInstrumentsPayloads Is Nothing Then runningStock.CEInstrumentsPayloads = New Dictionary(Of String, Payload)
+                            '            runningStock.CEInstrumentsPayloads.Add(runningOptionInstrument.Value.StrikePrice, optionEodData.Values.LastOrDefault)
+                            '        End If
+                            '    End If
+                            'Next
+                            Try
+                                For i As Integer = 0 To runningStock.OptionInstruments.Count - 1 Step 50
+                                    canceller.Token.ThrowIfCancellationRequested()
+                                    Dim numberOfData As Integer = If(runningStock.OptionInstruments.Count - i > 50, 50, runningStock.OptionInstruments.Count - i)
+                                    Dim tasks As IEnumerable(Of Task(Of Boolean)) = Nothing
+                                    tasks = runningStock.OptionInstruments.Values.ToList.GetRange(i, numberOfData).Select(Async Function(x)
+                                                                                                                              Try
+                                                                                                                                  Await GetDataAsync(runningStock, x)
+                                                                                                                              Catch ex As Exception
+                                                                                                                                  Throw ex
+                                                                                                                              End Try
+                                                                                                                              Return True
+                                                                                                                          End Function)
+
+                                    Dim mainTask As Task = Task.WhenAll(tasks)
+                                    Await mainTask.ConfigureAwait(False)
+                                    If mainTask.Exception IsNot Nothing Then
+                                        Throw mainTask.Exception
                                     End If
-                                Catch ex As Exception
-                                    Throw ex
-                                End Try
-                            Next
+                                Next
+                            Catch cex As TaskCanceledException
+                                Throw cex
+                            Catch aex As AggregateException
+                                Throw aex
+                            Catch ex As Exception
+                                Throw ex
+                            End Try
                         End If
 
                         If runningStock.PEInstrumentsPayloads IsNot Nothing AndAlso runningStock.PEInstrumentsPayloads.Count > 0 Then
@@ -381,6 +404,8 @@ Public Class frmMain
                         dt.Rows.Add(row)
                     End If
                 Next
+
+                SetDatagridBindDatatable_ThreadSafe(dgvMain, dt)
             End If
         Catch cex As OperationCanceledException
             MsgBox(cex.Message)
@@ -392,6 +417,19 @@ Public Class frmMain
             SetObjectEnableDisable_ThreadSafe(grpMode, True)
             OnHeartbeat("Process Complete")
         End Try
+    End Function
+
+    Private Async Function GetDataAsync(ByVal originatingInstrument As InstrumentDetails, ByVal optionInstrument As OptionInstrumentDetails) As Task
+        Dim optionEodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(optionInstrument.TradingSymbol, optionInstrument.InstrumentToken, Now.Date, Now.Date, DataType.EOD, Nothing)
+        If optionEodData IsNot Nothing AndAlso optionEodData.Count > 0 Then
+            If optionInstrument.InstrumentType = "PE" Then
+                If originatingInstrument.PEInstrumentsPayloads Is Nothing Then originatingInstrument.PEInstrumentsPayloads = New Concurrent.ConcurrentDictionary(Of String, Payload)
+                originatingInstrument.PEInstrumentsPayloads.TryAdd(optionInstrument.StrikePrice, optionEodData.Values.LastOrDefault)
+            ElseIf optionInstrument.InstrumentType = "CE" Then
+                If originatingInstrument.CEInstrumentsPayloads Is Nothing Then originatingInstrument.CEInstrumentsPayloads = New Concurrent.ConcurrentDictionary(Of String, Payload)
+                originatingInstrument.CEInstrumentsPayloads.TryAdd(optionInstrument.StrikePrice, optionEodData.Values.LastOrDefault)
+            End If
+        End If
     End Function
 
 #Region "Private Functions"
@@ -430,10 +468,10 @@ Public Class frmMain
             If GetRadioButtonChecked_ThreadSafe(rdbWithAPI) Then
                 Dim proxyToBeUsed As HttpProxy = Nothing
                 Using browser As New HttpBrowser(proxyToBeUsed, Net.DecompressionMethods.GZip Or DecompressionMethods.Deflate Or DecompressionMethods.None, New TimeSpan(0, 1, 0), canceller)
-                    AddHandler browser.DocumentDownloadComplete, AddressOf OnDocumentDownloadComplete
-                    AddHandler browser.Heartbeat, AddressOf OnHeartbeat
-                    AddHandler browser.WaitingFor, AddressOf OnWaitingFor
-                    AddHandler browser.DocumentRetryStatus, AddressOf OnDocumentRetryStatus
+                    'AddHandler browser.DocumentDownloadComplete, AddressOf OnDocumentDownloadComplete
+                    'AddHandler browser.Heartbeat, AddressOf OnHeartbeat
+                    'AddHandler browser.WaitingFor, AddressOf OnWaitingFor
+                    'AddHandler browser.DocumentRetryStatus, AddressOf OnDocumentRetryStatus
 
                     Dim headers As New Dictionary(Of String, String)
                     headers.Add("Host", "kite.zerodha.com")
@@ -459,36 +497,40 @@ Public Class frmMain
                         historicalCandlesJSONDict = l.Item2
                     End If
 
-                    RemoveHandler browser.DocumentDownloadComplete, AddressOf OnDocumentDownloadComplete
-                    RemoveHandler browser.Heartbeat, AddressOf OnHeartbeat
-                    RemoveHandler browser.WaitingFor, AddressOf OnWaitingFor
-                    RemoveHandler browser.DocumentRetryStatus, AddressOf OnDocumentRetryStatus
+                    'RemoveHandler browser.DocumentDownloadComplete, AddressOf OnDocumentDownloadComplete
+                    'RemoveHandler browser.Heartbeat, AddressOf OnHeartbeat
+                    'RemoveHandler browser.WaitingFor, AddressOf OnWaitingFor
+                    'RemoveHandler browser.DocumentRetryStatus, AddressOf OnDocumentRetryStatus
                 End Using
             ElseIf GetRadioButtonChecked_ThreadSafe(rdbWithoutAPI) OrElse GetRadioButtonChecked_ThreadSafe(rdbFromFile) Then
                 Dim proxyToBeUsed As HttpProxy = Nothing
                 Using browser As New HttpBrowser(proxyToBeUsed, Net.DecompressionMethods.GZip, New TimeSpan(0, 1, 0), canceller)
-                    AddHandler browser.DocumentDownloadComplete, AddressOf OnDocumentDownloadComplete
-                    AddHandler browser.Heartbeat, AddressOf OnHeartbeat
-                    AddHandler browser.WaitingFor, AddressOf OnWaitingFor
-                    AddHandler browser.DocumentRetryStatus, AddressOf OnDocumentRetryStatus
+                    'AddHandler browser.DocumentDownloadComplete, AddressOf OnDocumentDownloadComplete
+                    'AddHandler browser.Heartbeat, AddressOf OnHeartbeat
+                    'AddHandler browser.WaitingFor, AddressOf OnWaitingFor
+                    'AddHandler browser.DocumentRetryStatus, AddressOf OnDocumentRetryStatus
 
-                    canceller.Token.ThrowIfCancellationRequested()
-                    Dim l As Tuple(Of Uri, Object) = Await browser.NonPOSTRequestAsync(historicalDataURL,
+                    Try
+                        canceller.Token.ThrowIfCancellationRequested()
+                        Dim l As Tuple(Of Uri, Object) = Await browser.NonPOSTRequestAsync(historicalDataURL,
                                                                                         HttpMethod.Get,
                                                                                         Nothing,
                                                                                         True,
                                                                                         Nothing,
                                                                                         True,
                                                                                         "application/json").ConfigureAwait(False)
-                    canceller.Token.ThrowIfCancellationRequested()
-                    If l IsNot Nothing AndAlso l.Item2 IsNot Nothing Then
-                        historicalCandlesJSONDict = l.Item2
-                    End If
+                        canceller.Token.ThrowIfCancellationRequested()
+                        If l IsNot Nothing AndAlso l.Item2 IsNot Nothing Then
+                            historicalCandlesJSONDict = l.Item2
+                        End If
+                    Catch ex As Exception
+                        Throw ex
+                    End Try
 
-                    RemoveHandler browser.DocumentDownloadComplete, AddressOf OnDocumentDownloadComplete
-                    RemoveHandler browser.Heartbeat, AddressOf OnHeartbeat
-                    RemoveHandler browser.WaitingFor, AddressOf OnWaitingFor
-                    RemoveHandler browser.DocumentRetryStatus, AddressOf OnDocumentRetryStatus
+                    'RemoveHandler browser.DocumentDownloadComplete, AddressOf OnDocumentDownloadComplete
+                    'RemoveHandler browser.Heartbeat, AddressOf OnHeartbeat
+                    'RemoveHandler browser.WaitingFor, AddressOf OnWaitingFor
+                    'RemoveHandler browser.DocumentRetryStatus, AddressOf OnDocumentRetryStatus
                 End Using
             End If
 
@@ -525,7 +567,7 @@ Public Class frmMain
         Return ret
     End Function
 
-    Public Async Function GetFutureStockList(ByVal tradingDate As Date) As Task(Of Dictionary(Of String, Date))
+    Public Async Function GetFutureStockListAsync(ByVal tradingDate As Date) As Task(Of Dictionary(Of String, Date))
         Dim ret As Dictionary(Of String, Date) = Nothing
 
         Using sqlHlpr As New MySQLDBHelper(My.Settings.ServerName, "local_stock", "3306", "rio", "speech123", canceller)
@@ -575,7 +617,7 @@ Public Class frmMain
         Return ret
     End Function
 
-    Public Async Function GetCashStockList(ByVal tradingDate As Date) As Task(Of Dictionary(Of String, String))
+    Public Async Function GetCashStockListAsync(ByVal tradingDate As Date) As Task(Of Dictionary(Of String, String))
         Dim ret As Dictionary(Of String, String) = Nothing
 
         Using sqlHlpr As New MySQLDBHelper(My.Settings.ServerName, "local_stock", "3306", "rio", "speech123", canceller)
@@ -600,7 +642,7 @@ Public Class frmMain
         Return ret
     End Function
 
-    Public Async Function GetOptionStockList(ByVal instrumentName As String, ByVal tradingDate As Date, ByVal mainInstrumentExpiry As Date) As Task(Of Dictionary(Of String, OptionInstrumentDetails))
+    Public Async Function GetOptionStockListAsync(ByVal instrumentName As String, ByVal tradingDate As Date, ByVal mainInstrumentExpiry As Date) As Task(Of Dictionary(Of String, OptionInstrumentDetails))
         Dim ret As Dictionary(Of String, OptionInstrumentDetails) = Nothing
 
         Using sqlHlpr As New MySQLDBHelper(My.Settings.ServerName, "local_stock", "3306", "rio", "speech123", canceller)

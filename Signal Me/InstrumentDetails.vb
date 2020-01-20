@@ -3,8 +3,8 @@
     Public Property CashTradingSymbol As String
     Public Property CashInstrumentToken As String
     Public Property OptionInstruments As Dictionary(Of String, OptionInstrumentDetails)
-    Public Property PEInstrumentsPayloads As Dictionary(Of String, Payload)
-    Public Property CEInstrumentsPayloads As Dictionary(Of String, Payload)
+    Public Property PEInstrumentsPayloads As Concurrent.ConcurrentDictionary(Of String, Payload)
+    Public Property CEInstrumentsPayloads As Concurrent.ConcurrentDictionary(Of String, Payload)
     Public Property Open As Decimal
     Public Property Low As Decimal
     Public Property High As Decimal
