@@ -389,6 +389,8 @@ Public Class frmMain
                 'Await Task.WhenAll(tasks).ConfigureAwait(False)
                 While True
                     Try
+                        Dim sw As Stopwatch = New Stopwatch
+                        sw.Start()
                         Dim numberOfParallelHit As Integer = 10
                         For i As Integer = 0 To workableStockList.Count - 1 Step numberOfParallelHit
                             canceller.Token.ThrowIfCancellationRequested()
@@ -414,6 +416,8 @@ Public Class frmMain
                                 Throw mainTask.Exception
                             End If
                         Next
+                        sw.Stop()
+                        SetLabelText_ThreadSafe(lblTime, String.Format("Last Iteration Time (sec): {0}", sw.Elapsed.TotalSeconds))
                     Catch cex As TaskCanceledException
                         Throw cex
                     Catch aex As AggregateException

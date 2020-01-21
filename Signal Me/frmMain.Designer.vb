@@ -27,7 +27,7 @@ Partial Class frmMain
         Me.pnlFileBrowse = New System.Windows.Forms.Panel()
         Me.btnBrowse = New System.Windows.Forms.Button()
         Me.txtFilePath = New System.Windows.Forms.TextBox()
-        Me.Label1 = New System.Windows.Forms.Label()
+        Me.lblFilePath = New System.Windows.Forms.Label()
         Me.rdbFromFile = New System.Windows.Forms.RadioButton()
         Me.rdbWithoutAPI = New System.Windows.Forms.RadioButton()
         Me.rdbWithAPI = New System.Windows.Forms.RadioButton()
@@ -38,6 +38,7 @@ Partial Class frmMain
         Me.dtpckrTradingDate = New System.Windows.Forms.DateTimePicker()
         Me.lblFromDate = New System.Windows.Forms.Label()
         Me.sfdgvMain = New Syncfusion.WinForms.DataGrid.SfDataGrid()
+        Me.lblTime = New System.Windows.Forms.Label()
         Me.grpMode.SuspendLayout()
         Me.pnlFileBrowse.SuspendLayout()
         CType(Me.sfdgvMain, System.ComponentModel.ISupportInitialize).BeginInit()
@@ -62,7 +63,7 @@ Partial Class frmMain
         '
         Me.pnlFileBrowse.Controls.Add(Me.btnBrowse)
         Me.pnlFileBrowse.Controls.Add(Me.txtFilePath)
-        Me.pnlFileBrowse.Controls.Add(Me.Label1)
+        Me.pnlFileBrowse.Controls.Add(Me.lblFilePath)
         Me.pnlFileBrowse.Location = New System.Drawing.Point(304, 10)
         Me.pnlFileBrowse.Name = "pnlFileBrowse"
         Me.pnlFileBrowse.Size = New System.Drawing.Size(332, 48)
@@ -85,14 +86,14 @@ Partial Class frmMain
         Me.txtFilePath.Size = New System.Drawing.Size(221, 22)
         Me.txtFilePath.TabIndex = 38
         '
-        'Label1
+        'lblFilePath
         '
-        Me.Label1.AutoSize = True
-        Me.Label1.Location = New System.Drawing.Point(2, 16)
-        Me.Label1.Name = "Label1"
-        Me.Label1.Size = New System.Drawing.Size(67, 17)
-        Me.Label1.TabIndex = 37
-        Me.Label1.Text = "File Path:"
+        Me.lblFilePath.AutoSize = True
+        Me.lblFilePath.Location = New System.Drawing.Point(2, 16)
+        Me.lblFilePath.Name = "lblFilePath"
+        Me.lblFilePath.Size = New System.Drawing.Size(67, 17)
+        Me.lblFilePath.TabIndex = 37
+        Me.lblFilePath.Text = "File Path:"
         '
         'rdbFromFile
         '
@@ -132,7 +133,7 @@ Partial Class frmMain
         'btnStop
         '
         Me.btnStop.Anchor = CType((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.btnStop.Location = New System.Drawing.Point(994, 16)
+        Me.btnStop.Location = New System.Drawing.Point(1301, 16)
         Me.btnStop.Margin = New System.Windows.Forms.Padding(3, 2, 3, 2)
         Me.btnStop.Name = "btnStop"
         Me.btnStop.Size = New System.Drawing.Size(139, 39)
@@ -143,7 +144,7 @@ Partial Class frmMain
         'btnStart
         '
         Me.btnStart.Anchor = CType((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.btnStart.Location = New System.Drawing.Point(842, 17)
+        Me.btnStart.Location = New System.Drawing.Point(1149, 17)
         Me.btnStart.Margin = New System.Windows.Forms.Padding(3, 2, 3, 2)
         Me.btnStart.Name = "btnStart"
         Me.btnStart.Size = New System.Drawing.Size(145, 39)
@@ -157,7 +158,7 @@ Partial Class frmMain
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.lblProgress.Location = New System.Drawing.Point(0, 581)
         Me.lblProgress.Name = "lblProgress"
-        Me.lblProgress.Size = New System.Drawing.Size(1141, 44)
+        Me.lblProgress.Size = New System.Drawing.Size(1448, 44)
         Me.lblProgress.TabIndex = 31
         Me.lblProgress.Text = "Progress Status"
         '
@@ -198,15 +199,25 @@ Partial Class frmMain
         Me.sfdgvMain.Margin = New System.Windows.Forms.Padding(4)
         Me.sfdgvMain.Name = "sfdgvMain"
         Me.sfdgvMain.PasteOption = Syncfusion.WinForms.DataGrid.Enums.PasteOptions.None
-        Me.sfdgvMain.Size = New System.Drawing.Size(1138, 478)
+        Me.sfdgvMain.Size = New System.Drawing.Size(1445, 478)
         Me.sfdgvMain.TabIndex = 35
         Me.sfdgvMain.Text = "SfDataGrid1"
+        '
+        'lblTime
+        '
+        Me.lblTime.AutoSize = True
+        Me.lblTime.Location = New System.Drawing.Point(843, 30)
+        Me.lblTime.Name = "lblTime"
+        Me.lblTime.Size = New System.Drawing.Size(141, 17)
+        Me.lblTime.TabIndex = 36
+        Me.lblTime.Text = "Last Iteration Time: 0"
         '
         'frmMain
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(8.0!, 16.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(1144, 629)
+        Me.ClientSize = New System.Drawing.Size(1451, 629)
+        Me.Controls.Add(Me.lblTime)
         Me.Controls.Add(Me.sfdgvMain)
         Me.Controls.Add(Me.dtpckrTradingDate)
         Me.Controls.Add(Me.lblFromDate)
@@ -239,8 +250,9 @@ Partial Class frmMain
     Friend WithEvents pnlFileBrowse As Panel
     Friend WithEvents btnBrowse As Button
     Friend WithEvents txtFilePath As TextBox
-    Friend WithEvents Label1 As Label
+    Friend WithEvents lblFilePath As Label
     Friend WithEvents dtpckrTradingDate As DateTimePicker
     Friend WithEvents lblFromDate As Label
     Friend WithEvents sfdgvMain As Syncfusion.WinForms.DataGrid.SfDataGrid
+    Friend WithEvents lblTime As Label
 End Class
