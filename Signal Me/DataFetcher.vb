@@ -104,9 +104,10 @@ Public Class DataFetcher
 
                     If _instrument.OptionInstruments IsNot Nothing AndAlso _instrument.OptionInstruments.Count > 0 Then
                         Try
-                            For i As Integer = 0 To _instrument.OptionInstruments.Count - 1 Step 100
+                            Dim numberOfParallelHit As Integer = 50
+                            For i As Integer = 0 To _instrument.OptionInstruments.Count - 1 Step numberOfParallelHit
                                 _cts.Token.ThrowIfCancellationRequested()
-                                Dim numberOfData As Integer = If(_instrument.OptionInstruments.Count - i > 100, 100, _instrument.OptionInstruments.Count - i)
+                                Dim numberOfData As Integer = If(_instrument.OptionInstruments.Count - i > numberOfParallelHit, numberOfParallelHit, _instrument.OptionInstruments.Count - i)
                                 Dim tasks As IEnumerable(Of Task(Of Boolean)) = Nothing
                                 tasks = _instrument.OptionInstruments.Values.ToList.GetRange(i, numberOfData).Select(Async Function(x)
                                                                                                                          Try
