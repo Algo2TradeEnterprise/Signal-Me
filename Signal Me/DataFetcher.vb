@@ -52,173 +52,173 @@ Public Class DataFetcher
 
     Public Async Function StartFetchingAsync() As Task
         Try
-            While True
-                _cts.Token.ThrowIfCancellationRequested()
-                Dim eodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(_instrument.CashInstrumentToken, _instrument.CashTradingSymbol, _tradingDate.Date.AddDays(-150), _tradingDate.Date, DataType.EOD, Nothing, _fetchDataWithAPI, _fetchDataWithoutAPI, _cts)
-                _cts.Token.ThrowIfCancellationRequested()
-                If eodData IsNot Nothing AndAlso eodData.Count > 0 Then
-                    If _instrument.Open = Decimal.MinValue OrElse _instrument.Open <> eodData.LastOrDefault.Value.Open Then
-                        _instrument.Open = eodData.LastOrDefault.Value.Open
-                        _instrument.NotifyPropertyChanged("Open")
-                    End If
-                    If _instrument.Low = Decimal.MinValue OrElse _instrument.Low <> eodData.LastOrDefault.Value.Low Then
-                        _instrument.Low = eodData.LastOrDefault.Value.Low
-                        _instrument.NotifyPropertyChanged("Low")
-                    End If
-                    If _instrument.High = Decimal.MinValue OrElse _instrument.High <> eodData.LastOrDefault.Value.High Then
-                        _instrument.High = eodData.LastOrDefault.Value.High
-                        _instrument.NotifyPropertyChanged("High")
-                    End If
-                    If _instrument.Close = Decimal.MinValue OrElse _instrument.Close <> eodData.LastOrDefault.Value.Close Then
-                        _instrument.Close = eodData.LastOrDefault.Value.Close
-                        _instrument.NotifyPropertyChanged("Close")
-                    End If
-                    If _instrument.Volume = Decimal.MinValue OrElse _instrument.Volume <> eodData.LastOrDefault.Value.Volume Then
-                        _instrument.Volume = eodData.LastOrDefault.Value.Volume
-                        _instrument.NotifyPropertyChanged("Volume")
-                    End If
-                    If _instrument.LTP = Decimal.MinValue OrElse _instrument.LTP <> eodData.LastOrDefault.Value.Close Then
-                        _instrument.LTP = eodData.LastOrDefault.Value.Close
-                        _instrument.NotifyPropertyChanged("LTP")
-                        _instrument.NotifyPropertyChanged("ChangePer")
-                    End If
-                    If (_instrument.PreviousClose = Decimal.MinValue OrElse _instrument.PreviousClose <> eodData.LastOrDefault.Value.PreviousPayload.Close) AndAlso
-                        eodData.LastOrDefault.Value.PreviousPayload IsNot Nothing Then
-                        _instrument.PreviousClose = eodData.LastOrDefault.Value.PreviousPayload.Close
-                        _instrument.NotifyPropertyChanged("PreviousClose")
-                    End If
-
-                    If _instrument.ATR = Decimal.MinValue OrElse _instrument.ATR = 0 Then
-                        Dim atrPayload As Dictionary(Of Date, Decimal) = Nothing
-                        CalculateATR(14, eodData, atrPayload)
-                        If atrPayload IsNot Nothing AndAlso atrPayload.ContainsKey(eodData.LastOrDefault.Value.PreviousPayload.PayloadDate) Then
-                            Dim atr As Decimal = atrPayload(eodData.LastOrDefault.Value.PreviousPayload.PayloadDate)
-
-                            _instrument.ATR = (atr / _instrument.Open) * 100
-                            _instrument.NotifyPropertyChanged("ATR")
-
-                            _instrument.Slab = CalculateSlab(_instrument.Open, atr)
-                            _instrument.NotifyPropertyChanged("Slab")
-                        End If
-                    End If
-
-                    If _instrument.OptionInstruments IsNot Nothing AndAlso _instrument.OptionInstruments.Count > 0 Then
-                        Try
-                            Dim numberOfParallelHit As Integer = 50
-                            For i As Integer = 0 To _instrument.OptionInstruments.Count - 1 Step numberOfParallelHit
-                                _cts.Token.ThrowIfCancellationRequested()
-                                Dim numberOfData As Integer = If(_instrument.OptionInstruments.Count - i > numberOfParallelHit, numberOfParallelHit, _instrument.OptionInstruments.Count - i)
-                                Dim tasks As IEnumerable(Of Task(Of Boolean)) = Nothing
-                                tasks = _instrument.OptionInstruments.Values.ToList.GetRange(i, numberOfData).Select(Async Function(x)
-                                                                                                                         Try
-                                                                                                                             Await GetOptionDataAsync(_instrument, x, _tradingDate).ConfigureAwait(False)
-                                                                                                                         Catch ex As Exception
-                                                                                                                             Throw ex
-                                                                                                                         End Try
-                                                                                                                         Return True
-                                                                                                                     End Function)
-
-                                Dim mainTask As Task = Task.WhenAll(tasks)
-                                Await mainTask.ConfigureAwait(False)
-                                If mainTask.Exception IsNot Nothing Then
-                                    Throw mainTask.Exception
-                                End If
-                            Next
-                        Catch cex As TaskCanceledException
-                            Throw cex
-                        Catch aex As AggregateException
-                            Throw aex
-                        Catch ex As Exception
-                            Throw ex
-                        End Try
-                    End If
-
-                    If _instrument.PEInstrumentsPayloads IsNot Nothing AndAlso _instrument.PEInstrumentsPayloads.Count > 0 Then
-                        Dim sumOfPutOI As Decimal = _instrument.PEInstrumentsPayloads.Sum(Function(x)
-                                                                                              If CDec(x.Key) < _instrument.Close Then
-                                                                                                  Return x.Value.OI
-                                                                                              Else
-                                                                                                  Return 0
-                                                                                              End If
-                                                                                          End Function)
-
-                        If _instrument.SumOfPutsOI = Long.MinValue OrElse _instrument.SumOfPutsOI <> sumOfPutOI Then
-                            _instrument.SumOfPutsOI = sumOfPutOI
-                            _instrument.NotifyPropertyChanged("SumOfPutsOI")
-                            _instrument.NotifyPropertyChanged("OIPCC")
-                            _instrument.NotifyPropertyChanged("OICPC")
-                            _instrument.NotifyPropertyChanged("OIPTR")
-                            _instrument.NotifyPropertyChanged("OICTR")
-                        End If
-
-                        Dim sumOfPutOIChange As Decimal = _instrument.PEInstrumentsPayloads.Sum(Function(x)
-                                                                                                    If CDec(x.Key) < _instrument.Close Then
-                                                                                                        If x.Value.PreviousPayload IsNot Nothing Then
-                                                                                                            Return x.Value.OI - x.Value.PreviousPayload.OI
-                                                                                                        Else
-                                                                                                            Return x.Value.OI
-                                                                                                        End If
-                                                                                                    Else
-                                                                                                        Return 0
-                                                                                                    End If
-                                                                                                End Function)
-
-                        If _instrument.SumOfPutsOIChange = Long.MinValue OrElse _instrument.SumOfPutsOIChange <> sumOfPutOIChange Then
-                            _instrument.SumOfPutsOIChange = sumOfPutOIChange
-                            _instrument.NotifyPropertyChanged("SumOfPutsOIChange")
-                            _instrument.NotifyPropertyChanged("OIChangePCC")
-                            _instrument.NotifyPropertyChanged("OIChangeCPC")
-                            _instrument.NotifyPropertyChanged("OIChangePTR")
-                            _instrument.NotifyPropertyChanged("OIChangeCTR")
-                        End If
-                    End If
-
-                    If _instrument.CEInstrumentsPayloads IsNot Nothing AndAlso _instrument.CEInstrumentsPayloads.Count > 0 Then
-                        Dim sumOfCallOI As Decimal = _instrument.CEInstrumentsPayloads.Sum(Function(x)
-                                                                                               If CDec(x.Key) > _instrument.Close Then
-                                                                                                   Return x.Value.OI
-                                                                                               Else
-                                                                                                   Return 0
-                                                                                               End If
-                                                                                           End Function)
-
-                        If _instrument.SumOfCallsOI = Long.MinValue OrElse _instrument.SumOfCallsOI <> sumOfCallOI Then
-                            _instrument.SumOfCallsOI = sumOfCallOI
-                            _instrument.NotifyPropertyChanged("SumOfCallsOI")
-                            _instrument.NotifyPropertyChanged("OIPCC")
-                            _instrument.NotifyPropertyChanged("OICPC")
-                            _instrument.NotifyPropertyChanged("OIPTR")
-                            _instrument.NotifyPropertyChanged("OICTR")
-                        End If
-
-                        Dim sumOfCallOIChange As Decimal = _instrument.CEInstrumentsPayloads.Sum(Function(x)
-                                                                                                     If CDec(x.Key) > _instrument.Close Then
-                                                                                                         If x.Value.PreviousPayload IsNot Nothing Then
-                                                                                                             Return x.Value.OI - x.Value.PreviousPayload.OI
-                                                                                                         Else
-                                                                                                             Return x.Value.OI
-                                                                                                         End If
-                                                                                                     Else
-                                                                                                         Return 0
-                                                                                                     End If
-                                                                                                 End Function)
-
-                        If _instrument.SumOfCallsOIChange = Long.MinValue OrElse _instrument.SumOfCallsOIChange <> sumOfCallOIChange Then
-                            _instrument.SumOfCallsOIChange = sumOfCallOIChange
-                            _instrument.NotifyPropertyChanged("SumOfCallsOIChange")
-                            _instrument.NotifyPropertyChanged("OIChangePCC")
-                            _instrument.NotifyPropertyChanged("OIChangeCPC")
-                            _instrument.NotifyPropertyChanged("OIChangePTR")
-                            _instrument.NotifyPropertyChanged("OIChangeCTR")
-                        End If
-                    End If
-
-                    _instrument.LastUpdateTime = Now
-                    _instrument.NotifyPropertyChanged("LastUpdateTime")
+            'While True
+            _cts.Token.ThrowIfCancellationRequested()
+            Dim eodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(_instrument.CashInstrumentToken, _instrument.CashTradingSymbol, _tradingDate.Date.AddDays(-150), _tradingDate.Date, DataType.EOD, Nothing, _fetchDataWithAPI, _fetchDataWithoutAPI, _cts)
+            _cts.Token.ThrowIfCancellationRequested()
+            If eodData IsNot Nothing AndAlso eodData.Count > 0 Then
+                If _instrument.Open = Decimal.MinValue OrElse _instrument.Open <> eodData.LastOrDefault.Value.Open Then
+                    _instrument.Open = eodData.LastOrDefault.Value.Open
+                    _instrument.NotifyPropertyChanged("Open")
+                End If
+                If _instrument.Low = Decimal.MinValue OrElse _instrument.Low <> eodData.LastOrDefault.Value.Low Then
+                    _instrument.Low = eodData.LastOrDefault.Value.Low
+                    _instrument.NotifyPropertyChanged("Low")
+                End If
+                If _instrument.High = Decimal.MinValue OrElse _instrument.High <> eodData.LastOrDefault.Value.High Then
+                    _instrument.High = eodData.LastOrDefault.Value.High
+                    _instrument.NotifyPropertyChanged("High")
+                End If
+                If _instrument.Close = Decimal.MinValue OrElse _instrument.Close <> eodData.LastOrDefault.Value.Close Then
+                    _instrument.Close = eodData.LastOrDefault.Value.Close
+                    _instrument.NotifyPropertyChanged("Close")
+                End If
+                If _instrument.Volume = Decimal.MinValue OrElse _instrument.Volume <> eodData.LastOrDefault.Value.Volume Then
+                    _instrument.Volume = eodData.LastOrDefault.Value.Volume
+                    _instrument.NotifyPropertyChanged("Volume")
+                End If
+                If _instrument.LTP = Decimal.MinValue OrElse _instrument.LTP <> eodData.LastOrDefault.Value.Close Then
+                    _instrument.LTP = eodData.LastOrDefault.Value.Close
+                    _instrument.NotifyPropertyChanged("LTP")
+                    _instrument.NotifyPropertyChanged("ChangePer")
+                End If
+                If (_instrument.PreviousClose = Decimal.MinValue OrElse _instrument.PreviousClose <> eodData.LastOrDefault.Value.PreviousPayload.Close) AndAlso
+                    eodData.LastOrDefault.Value.PreviousPayload IsNot Nothing Then
+                    _instrument.PreviousClose = eodData.LastOrDefault.Value.PreviousPayload.Close
+                    _instrument.NotifyPropertyChanged("PreviousClose")
                 End If
 
-                Await Task.Delay(1000).ConfigureAwait(False)
-            End While
+                If _instrument.ATR = Decimal.MinValue OrElse _instrument.ATR = 0 Then
+                    Dim atrPayload As Dictionary(Of Date, Decimal) = Nothing
+                    CalculateATR(14, eodData, atrPayload)
+                    If atrPayload IsNot Nothing AndAlso atrPayload.ContainsKey(eodData.LastOrDefault.Value.PreviousPayload.PayloadDate) Then
+                        Dim atr As Decimal = atrPayload(eodData.LastOrDefault.Value.PreviousPayload.PayloadDate)
+
+                        _instrument.ATR = (atr / _instrument.Open) * 100
+                        _instrument.NotifyPropertyChanged("ATR")
+
+                        _instrument.Slab = CalculateSlab(_instrument.Open, atr)
+                        _instrument.NotifyPropertyChanged("Slab")
+                    End If
+                End If
+
+                If _instrument.OptionInstruments IsNot Nothing AndAlso _instrument.OptionInstruments.Count > 0 Then
+                    Try
+                        Dim numberOfParallelHit As Integer = 50
+                        For i As Integer = 0 To _instrument.OptionInstruments.Count - 1 Step numberOfParallelHit
+                            _cts.Token.ThrowIfCancellationRequested()
+                            Dim numberOfData As Integer = If(_instrument.OptionInstruments.Count - i > numberOfParallelHit, numberOfParallelHit, _instrument.OptionInstruments.Count - i)
+                            Dim tasks As IEnumerable(Of Task(Of Boolean)) = Nothing
+                            tasks = _instrument.OptionInstruments.Values.ToList.GetRange(i, numberOfData).Select(Async Function(x)
+                                                                                                                     Try
+                                                                                                                         Await GetOptionDataAsync(_instrument, x, _tradingDate).ConfigureAwait(False)
+                                                                                                                     Catch ex As Exception
+                                                                                                                         Throw ex
+                                                                                                                     End Try
+                                                                                                                     Return True
+                                                                                                                 End Function)
+
+                            Dim mainTask As Task = Task.WhenAll(tasks)
+                            Await mainTask.ConfigureAwait(False)
+                            If mainTask.Exception IsNot Nothing Then
+                                Throw mainTask.Exception
+                            End If
+                        Next
+                    Catch cex As TaskCanceledException
+                        Throw cex
+                    Catch aex As AggregateException
+                        Throw aex
+                    Catch ex As Exception
+                        Throw ex
+                    End Try
+                End If
+
+                If _instrument.PEInstrumentsPayloads IsNot Nothing AndAlso _instrument.PEInstrumentsPayloads.Count > 0 Then
+                    Dim sumOfPutOI As Decimal = _instrument.PEInstrumentsPayloads.Sum(Function(x)
+                                                                                          If CDec(x.Key) < _instrument.Close Then
+                                                                                              Return x.Value.OI
+                                                                                          Else
+                                                                                              Return 0
+                                                                                          End If
+                                                                                      End Function)
+
+                    If _instrument.SumOfPutsOI = Long.MinValue OrElse _instrument.SumOfPutsOI <> sumOfPutOI Then
+                        _instrument.SumOfPutsOI = sumOfPutOI
+                        _instrument.NotifyPropertyChanged("SumOfPutsOI")
+                        _instrument.NotifyPropertyChanged("OIPCC")
+                        _instrument.NotifyPropertyChanged("OICPC")
+                        _instrument.NotifyPropertyChanged("OIPTR")
+                        _instrument.NotifyPropertyChanged("OICTR")
+                    End If
+
+                    Dim sumOfPutOIChange As Decimal = _instrument.PEInstrumentsPayloads.Sum(Function(x)
+                                                                                                If CDec(x.Key) < _instrument.Close Then
+                                                                                                    If x.Value.PreviousPayload IsNot Nothing Then
+                                                                                                        Return x.Value.OI - x.Value.PreviousPayload.OI
+                                                                                                    Else
+                                                                                                        Return x.Value.OI
+                                                                                                    End If
+                                                                                                Else
+                                                                                                    Return 0
+                                                                                                End If
+                                                                                            End Function)
+
+                    If _instrument.SumOfPutsOIChange = Long.MinValue OrElse _instrument.SumOfPutsOIChange <> sumOfPutOIChange Then
+                        _instrument.SumOfPutsOIChange = sumOfPutOIChange
+                        _instrument.NotifyPropertyChanged("SumOfPutsOIChange")
+                        _instrument.NotifyPropertyChanged("OIChangePCC")
+                        _instrument.NotifyPropertyChanged("OIChangeCPC")
+                        _instrument.NotifyPropertyChanged("OIChangePTR")
+                        _instrument.NotifyPropertyChanged("OIChangeCTR")
+                    End If
+                End If
+
+                If _instrument.CEInstrumentsPayloads IsNot Nothing AndAlso _instrument.CEInstrumentsPayloads.Count > 0 Then
+                    Dim sumOfCallOI As Decimal = _instrument.CEInstrumentsPayloads.Sum(Function(x)
+                                                                                           If CDec(x.Key) > _instrument.Close Then
+                                                                                               Return x.Value.OI
+                                                                                           Else
+                                                                                               Return 0
+                                                                                           End If
+                                                                                       End Function)
+
+                    If _instrument.SumOfCallsOI = Long.MinValue OrElse _instrument.SumOfCallsOI <> sumOfCallOI Then
+                        _instrument.SumOfCallsOI = sumOfCallOI
+                        _instrument.NotifyPropertyChanged("SumOfCallsOI")
+                        _instrument.NotifyPropertyChanged("OIPCC")
+                        _instrument.NotifyPropertyChanged("OICPC")
+                        _instrument.NotifyPropertyChanged("OIPTR")
+                        _instrument.NotifyPropertyChanged("OICTR")
+                    End If
+
+                    Dim sumOfCallOIChange As Decimal = _instrument.CEInstrumentsPayloads.Sum(Function(x)
+                                                                                                 If CDec(x.Key) > _instrument.Close Then
+                                                                                                     If x.Value.PreviousPayload IsNot Nothing Then
+                                                                                                         Return x.Value.OI - x.Value.PreviousPayload.OI
+                                                                                                     Else
+                                                                                                         Return x.Value.OI
+                                                                                                     End If
+                                                                                                 Else
+                                                                                                     Return 0
+                                                                                                 End If
+                                                                                             End Function)
+
+                    If _instrument.SumOfCallsOIChange = Long.MinValue OrElse _instrument.SumOfCallsOIChange <> sumOfCallOIChange Then
+                        _instrument.SumOfCallsOIChange = sumOfCallOIChange
+                        _instrument.NotifyPropertyChanged("SumOfCallsOIChange")
+                        _instrument.NotifyPropertyChanged("OIChangePCC")
+                        _instrument.NotifyPropertyChanged("OIChangeCPC")
+                        _instrument.NotifyPropertyChanged("OIChangePTR")
+                        _instrument.NotifyPropertyChanged("OIChangeCTR")
+                    End If
+                End If
+
+                _instrument.LastUpdateTime = Now
+                _instrument.NotifyPropertyChanged("LastUpdateTime")
+            End If
+
+            '    Await Task.Delay(1000).ConfigureAwait(False)
+            'End While
         Catch ex As Exception
             Throw ex
         End Try

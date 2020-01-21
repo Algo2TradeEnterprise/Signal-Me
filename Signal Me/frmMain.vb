@@ -376,17 +376,53 @@ Public Class frmMain
                 SetSFGridDataBind_ThreadSafe(sfdgvMain, dashboardList)
                 SetSFGridFreezFirstColumn_ThreadSafe(sfdgvMain)
 
-                Dim tasks As List(Of Task) = New List(Of Task)
-                For Each runningStock In workableStockList
-                    canceller.Token.ThrowIfCancellationRequested()
-                    Dim dataFtchr As DataFetcher = New DataFetcher(canceller,
-                                                                   runningStock,
-                                                                   GetRadioButtonChecked_ThreadSafe(rdbWithAPI),
-                                                                   GetRadioButtonChecked_ThreadSafe(rdbWithoutAPI) OrElse GetRadioButtonChecked_ThreadSafe(rdbFromFile),
-                                                                   tradingDate)
-                    tasks.Add(Task.Run(AddressOf dataFtchr.StartFetchingAsync, canceller.Token))
-                Next
-                Await Task.WhenAll(tasks).ConfigureAwait(False)
+                'Dim tasks As List(Of Task) = New List(Of Task)
+                'For Each runningStock In workableStockList
+                '    canceller.Token.ThrowIfCancellationRequested()
+                '    Dim dataFtchr As DataFetcher = New DataFetcher(canceller,
+                '                                                   runningStock,
+                '                                                   GetRadioButtonChecked_ThreadSafe(rdbWithAPI),
+                '                                                   GetRadioButtonChecked_ThreadSafe(rdbWithoutAPI) OrElse GetRadioButtonChecked_ThreadSafe(rdbFromFile),
+                '                                                   tradingDate)
+                '    tasks.Add(Task.Run(AddressOf dataFtchr.StartFetchingAsync, canceller.Token))
+                'Next
+                'Await Task.WhenAll(tasks).ConfigureAwait(False)
+                While True
+                    Try
+                        Dim numberOfParallelHit As Integer = 10
+                        For i As Integer = 0 To workableStockList.Count - 1 Step numberOfParallelHit
+                            canceller.Token.ThrowIfCancellationRequested()
+                            Dim numberOfData As Integer = If(workableStockList.Count - i > numberOfParallelHit, numberOfParallelHit, workableStockList.Count - i)
+                            Dim tasks As IEnumerable(Of Task(Of Boolean)) = Nothing
+                            tasks = workableStockList.GetRange(i, numberOfData).Select(Async Function(x)
+                                                                                           Try
+                                                                                               Dim dataFtchr As DataFetcher = New DataFetcher(canceller,
+                                                                                                                                              x,
+                                                                                                                                              GetRadioButtonChecked_ThreadSafe(rdbWithAPI),
+                                                                                                                                              GetRadioButtonChecked_ThreadSafe(rdbWithoutAPI) OrElse GetRadioButtonChecked_ThreadSafe(rdbFromFile),
+                                                                                                                                              tradingDate)
+                                                                                               Await dataFtchr.StartFetchingAsync().ConfigureAwait(False)
+                                                                                           Catch ex As Exception
+                                                                                               Throw ex
+                                                                                           End Try
+                                                                                           Return True
+                                                                                       End Function)
+
+                            Dim mainTask As Task = Task.WhenAll(tasks)
+                            Await mainTask.ConfigureAwait(False)
+                            If mainTask.Exception IsNot Nothing Then
+                                Throw mainTask.Exception
+                            End If
+                        Next
+                    Catch cex As TaskCanceledException
+                        Throw cex
+                    Catch aex As AggregateException
+                        Throw aex
+                    Catch ex As Exception
+                        Throw ex
+                    End Try
+                    Await Task.Delay(1000, canceller.Token).ConfigureAwait(False)
+                End While
             End If
         Catch cex As OperationCanceledException
             MsgBox(cex.Message)
