@@ -37,7 +37,7 @@ Public Class frmMain
             Dim MyDelegate As New SetSFGridFreezFirstColumn_Delegate(AddressOf SetSFGridFreezFirstColumn_ThreadSafe)
             Me.Invoke(MyDelegate, New Object() {[grd]})
         Else
-            [grd].FrozenColumnCount = 1
+            [grd].FrozenColumnCount = 6
             'Await Task.Delay(500).ConfigureAwait(False)
         End If
     End Sub
@@ -252,6 +252,39 @@ Public Class frmMain
 
     Private canceller As CancellationTokenSource
 
+    Private Sub sfdgvMain_AutoGeneratingColumn(sender As Object, e As AutoGeneratingColumnArgs) Handles sfdgvMain.AutoGeneratingColumn
+        Dim eAutoGeneratingColumnArgsCommon As AutoGeneratingColumnArgs = e
+
+        sfdgvMain.Style.HeaderStyle.BackColor = Color.DeepSkyBlue
+        sfdgvMain.Style.HeaderStyle.TextColor = Color.White
+
+        sfdgvMain.Style.CheckBoxStyle.CheckedBackColor = Color.White
+        sfdgvMain.Style.CheckBoxStyle.CheckedTickColor = Color.LightSkyBlue
+        If eAutoGeneratingColumnArgsCommon.Column.CellType = "DateTime" Then
+            CType(eAutoGeneratingColumnArgsCommon.Column, GridDateTimeColumn).Pattern = DateTimePattern.Custom
+            CType(eAutoGeneratingColumnArgsCommon.Column, GridDateTimeColumn).Format = "HH:mm:ss"
+        End If
+    End Sub
+
+    Private Sub sfdgvMain_FilterPopupShowing(sender As Object, e As FilterPopupShowingEventArgs) Handles sfdgvMain.FilterPopupShowing
+        Dim eFilterPopupShowingEventArgsCommon As FilterPopupShowingEventArgs = e
+
+        eFilterPopupShowingEventArgsCommon.Control.BackColor = ColorTranslator.FromHtml("#EDF3F3")
+
+        'Customize the appearance of the CheckedListBox
+
+        sfdgvMain.Style.CheckBoxStyle.CheckedBackColor = Color.White
+        sfdgvMain.Style.CheckBoxStyle.CheckedTickColor = Color.LightSkyBlue
+        eFilterPopupShowingEventArgsCommon.Control.CheckListBox.Style.CheckBoxStyle.CheckedBackColor = Color.White
+        eFilterPopupShowingEventArgsCommon.Control.CheckListBox.Style.CheckBoxStyle.CheckedTickColor = Color.LightSkyBlue
+
+        'Customize the appearance of the Ok and Cancel buttons
+        eFilterPopupShowingEventArgsCommon.Control.CancelButton.BackColor = Color.DeepSkyBlue
+        eFilterPopupShowingEventArgsCommon.Control.OkButton.BackColor = eFilterPopupShowingEventArgsCommon.Control.CancelButton.BackColor
+        eFilterPopupShowingEventArgsCommon.Control.CancelButton.ForeColor = Color.White
+        eFilterPopupShowingEventArgsCommon.Control.OkButton.ForeColor = eFilterPopupShowingEventArgsCommon.Control.CancelButton.ForeColor
+    End Sub
+
     Private Sub btnStop_Click(sender As Object, e As EventArgs) Handles btnStop.Click
         canceller.Cancel()
     End Sub
@@ -310,33 +343,33 @@ Public Class frmMain
         Try
             Dim tradingDate As Date = GetDateTimePickerValue_ThreadSafe(dtpckrTradingDate)
             Dim workableStockList As List(Of InstrumentDetails) = Nothing
-            'Dim allStockList As Dictionary(Of String, Date) = Await GetFutureStockListAsync(tradingDate.Date).ConfigureAwait(False)
-            'Dim cashStockList As Dictionary(Of String, String) = Await GetCashStockListAsync(tradingDate.Date).ConfigureAwait(False)
-            'If allStockList IsNot Nothing AndAlso allStockList.Count > 0 Then
-            '    Dim ctr As Integer = 0
-            '    For Each runningStock In allStockList
-            '        ctr += 1
-            '        OnHeartbeat(String.Format("Getting option stocklist for {0}. #{1}/{2}", runningStock.Key, ctr, allStockList.Count))
-            '        Dim cashStockName As String = runningStock.Key
-            '        If runningStock.Key = "BANKNIFTY" Then cashStockName = "NIFTY BANK"
-            '        If runningStock.Key = "NIFTY" Then cashStockName = "NIFTY 50"
-            '        If cashStockList.ContainsKey(cashStockName) Then
-            '            Dim optionStockList As Dictionary(Of String, OptionInstrumentDetails) = Await GetOptionStockListAsync(runningStock.Key, tradingDate.Date, runningStock.Value).ConfigureAwait(False)
-            '            If optionStockList IsNot Nothing AndAlso optionStockList.Count > 0 Then
-            '                Dim workingInstrument As InstrumentDetails = New InstrumentDetails With {
-            '                        .OriginatingInstrument = runningStock.Key,
-            '                        .CashTradingSymbol = cashStockName,
-            '                        .CashInstrumentToken = cashStockList(cashStockName),
-            '                        .OptionInstruments = optionStockList
-            '                    }
+            Dim allStockList As Dictionary(Of String, Date) = Await GetFutureStockListAsync(tradingDate.Date).ConfigureAwait(False)
+            Dim cashStockList As Dictionary(Of String, String) = Await GetCashStockListAsync(tradingDate.Date).ConfigureAwait(False)
+            If allStockList IsNot Nothing AndAlso allStockList.Count > 0 Then
+                Dim ctr As Integer = 0
+                For Each runningStock In allStockList
+                    ctr += 1
+                    OnHeartbeat(String.Format("Getting option stocklist for {0}. #{1}/{2}", runningStock.Key, ctr, allStockList.Count))
+                    Dim cashStockName As String = runningStock.Key
+                    If runningStock.Key = "BANKNIFTY" Then cashStockName = "NIFTY BANK"
+                    If runningStock.Key = "NIFTY" Then cashStockName = "NIFTY 50"
+                    If cashStockList.ContainsKey(cashStockName) Then
+                        Dim optionStockList As Dictionary(Of String, OptionInstrumentDetails) = Await GetOptionStockListAsync(runningStock.Key, tradingDate.Date, runningStock.Value).ConfigureAwait(False)
+                        If optionStockList IsNot Nothing AndAlso optionStockList.Count > 0 Then
+                            Dim workingInstrument As InstrumentDetails = New InstrumentDetails With {
+                                    .OriginatingInstrument = runningStock.Key,
+                                    .CashTradingSymbol = cashStockName,
+                                    .CashInstrumentToken = cashStockList(cashStockName),
+                                    .OptionInstruments = optionStockList
+                                }
 
-            '                If workableStockList Is Nothing Then workableStockList = New List(Of InstrumentDetails)
-            '                workableStockList.Add(workingInstrument)
-            '            End If
-            '        End If
-            '    Next
-            'End If
-            workableStockList = GetDummyInstrumentList()
+                            If workableStockList Is Nothing Then workableStockList = New List(Of InstrumentDetails)
+                            workableStockList.Add(workingInstrument)
+                        End If
+                    End If
+                Next
+            End If
+            'workableStockList = GetDummyInstrumentList()
             If workableStockList IsNot Nothing AndAlso workableStockList.Count > 0 Then
                 Dim dashboardList As BindingList(Of InstrumentDetails) = New BindingList(Of InstrumentDetails)(workableStockList)
                 SetSFGridDataBind_ThreadSafe(sfdgvMain, dashboardList)
@@ -545,40 +578,13 @@ Public Class frmMain
         instrument.OptionInstruments.Add(option3.TradingSymbol, option3)
         instrument.OptionInstruments.Add(option4.TradingSymbol, option4)
 
-        ret = New List(Of InstrumentDetails) From {instrument}
+        Dim instrument1 As InstrumentDetails = New InstrumentDetails
+        instrument1.OriginatingInstrument = "JINDALSTEL"
+        instrument1.CashTradingSymbol = "JINDALSTEL"
+        instrument1.CashInstrumentToken = "1723649"
+
+        ret = New List(Of InstrumentDetails) From {instrument, instrument1}
 
         Return ret
     End Function
-
-    Private Sub sfdgvMain_AutoGeneratingColumn(sender As Object, e As Events.AutoGeneratingColumnArgs) Handles sfdgvMain.AutoGeneratingColumn
-        Dim eAutoGeneratingColumnArgsCommon As AutoGeneratingColumnArgs = e
-
-        sfdgvMain.Style.HeaderStyle.BackColor = Color.DeepSkyBlue
-        sfdgvMain.Style.HeaderStyle.TextColor = Color.White
-
-        sfdgvMain.Style.CheckBoxStyle.CheckedBackColor = Color.White
-        sfdgvMain.Style.CheckBoxStyle.CheckedTickColor = Color.LightSkyBlue
-        If eAutoGeneratingColumnArgsCommon.Column.CellType = "DateTime" Then
-            CType(eAutoGeneratingColumnArgsCommon.Column, GridDateTimeColumn).Pattern = DateTimePattern.SortableDateTime
-        End If
-    End Sub
-
-    Private Sub sfdgvMain_FilterPopupShowing(sender As Object, e As Events.FilterPopupShowingEventArgs) Handles sfdgvMain.FilterPopupShowing
-        Dim eFilterPopupShowingEventArgsCommon As FilterPopupShowingEventArgs = e
-
-        eFilterPopupShowingEventArgsCommon.Control.BackColor = ColorTranslator.FromHtml("#EDF3F3")
-
-        'Customize the appearance of the CheckedListBox
-
-        sfdgvMain.Style.CheckBoxStyle.CheckedBackColor = Color.White
-        sfdgvMain.Style.CheckBoxStyle.CheckedTickColor = Color.LightSkyBlue
-        eFilterPopupShowingEventArgsCommon.Control.CheckListBox.Style.CheckBoxStyle.CheckedBackColor = Color.White
-        eFilterPopupShowingEventArgsCommon.Control.CheckListBox.Style.CheckBoxStyle.CheckedTickColor = Color.LightSkyBlue
-
-        'Customize the appearance of the Ok and Cancel buttons
-        eFilterPopupShowingEventArgsCommon.Control.CancelButton.BackColor = Color.DeepSkyBlue
-        eFilterPopupShowingEventArgsCommon.Control.OkButton.BackColor = eFilterPopupShowingEventArgsCommon.Control.CancelButton.BackColor
-        eFilterPopupShowingEventArgsCommon.Control.CancelButton.ForeColor = Color.White
-        eFilterPopupShowingEventArgsCommon.Control.OkButton.ForeColor = eFilterPopupShowingEventArgsCommon.Control.CancelButton.ForeColor
-    End Sub
 End Class

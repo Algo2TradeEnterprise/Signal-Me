@@ -54,7 +54,7 @@ Public Class DataFetcher
         Try
             While True
                 _cts.Token.ThrowIfCancellationRequested()
-                Dim eodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(_instrument.CashInstrumentToken, _instrument.CashTradingSymbol, _tradingDate.Date.AddDays(-15), _tradingDate.Date, DataType.EOD, Nothing, _fetchDataWithAPI, _fetchDataWithoutAPI, _cts)
+                Dim eodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(_instrument.CashInstrumentToken, _instrument.CashTradingSymbol, _tradingDate.Date.AddDays(-150), _tradingDate.Date, DataType.EOD, Nothing, _fetchDataWithAPI, _fetchDataWithoutAPI, _cts)
                 _cts.Token.ThrowIfCancellationRequested()
                 If eodData IsNot Nothing AndAlso eodData.Count > 0 Then
                     If _instrument.Open = Decimal.MinValue OrElse _instrument.Open <> eodData.LastOrDefault.Value.Open Then
@@ -85,6 +85,20 @@ Public Class DataFetcher
                     If _instrument.PreviousClose = Decimal.MinValue OrElse _instrument.PreviousClose <> eodData.LastOrDefault.Value.PreviousPayload.Close Then
                         _instrument.PreviousClose = eodData.LastOrDefault.Value.PreviousPayload.Close
                         _instrument.NotifyPropertyChanged("PreviousClose")
+                    End If
+
+                    If _instrument.ATR = Decimal.MinValue OrElse _instrument.ATR = 0 Then
+                        Dim atrPayload As Dictionary(Of Date, Decimal) = Nothing
+                        CalculateATR(14, eodData, atrPayload)
+                        If atrPayload IsNot Nothing AndAlso atrPayload.ContainsKey(eodData.LastOrDefault.Value.PreviousPayload.PayloadDate) Then
+                            Dim atr As Decimal = atrPayload(eodData.LastOrDefault.Value.PreviousPayload.PayloadDate)
+
+                            _instrument.ATR = (atr / _instrument.Open) * 100
+                            _instrument.NotifyPropertyChanged("ATR")
+
+                            _instrument.Slab = CalculateSlab(_instrument.Open, atr)
+                            _instrument.NotifyPropertyChanged("Slab")
+                        End If
                     End If
 
                     If _instrument.OptionInstruments IsNot Nothing AndAlso _instrument.OptionInstruments.Count > 0 Then
@@ -126,13 +140,30 @@ Public Class DataFetcher
                                                                                               End If
                                                                                           End Function)
 
-                        If _instrument.SumOfPutsOI = Decimal.MinValue OrElse _instrument.SumOfPutsOI <> sumOfPutOI Then
+                        If _instrument.SumOfPutsOI = Long.MinValue OrElse _instrument.SumOfPutsOI <> sumOfPutOI Then
                             _instrument.SumOfPutsOI = sumOfPutOI
                             _instrument.NotifyPropertyChanged("SumOfPutsOI")
-                            _instrument.NotifyPropertyChanged("PCC")
-                            _instrument.NotifyPropertyChanged("CPC")
-                            _instrument.NotifyPropertyChanged("PTR")
-                            _instrument.NotifyPropertyChanged("CTR")
+                            _instrument.NotifyPropertyChanged("OIPCC")
+                            _instrument.NotifyPropertyChanged("OICPC")
+                            _instrument.NotifyPropertyChanged("OIPTR")
+                            _instrument.NotifyPropertyChanged("OICTR")
+                        End If
+
+                        Dim sumOfPutOIChange As Decimal = _instrument.PEInstrumentsPayloads.Sum(Function(x)
+                                                                                                    If CDec(x.Key) < _instrument.Close Then
+                                                                                                        Return x.Value.OI - x.Value.PreviousPayload.OI
+                                                                                                    Else
+                                                                                                        Return 0
+                                                                                                    End If
+                                                                                                End Function)
+
+                        If _instrument.SumOfPutsOIChange = Long.MinValue OrElse _instrument.SumOfPutsOIChange <> sumOfPutOIChange Then
+                            _instrument.SumOfPutsOIChange = sumOfPutOIChange
+                            _instrument.NotifyPropertyChanged("SumOfPutsOIChange")
+                            _instrument.NotifyPropertyChanged("OIChangePCC")
+                            _instrument.NotifyPropertyChanged("OIChangeCPC")
+                            _instrument.NotifyPropertyChanged("OIChangePTR")
+                            _instrument.NotifyPropertyChanged("OIChangeCTR")
                         End If
                     End If
 
@@ -145,13 +176,30 @@ Public Class DataFetcher
                                                                                                End If
                                                                                            End Function)
 
-                        If _instrument.SumOfCallsOI = Decimal.MinValue OrElse _instrument.SumOfCallsOI <> sumOfCallOI Then
+                        If _instrument.SumOfCallsOI = Long.MinValue OrElse _instrument.SumOfCallsOI <> sumOfCallOI Then
                             _instrument.SumOfCallsOI = sumOfCallOI
                             _instrument.NotifyPropertyChanged("SumOfCallsOI")
-                            _instrument.NotifyPropertyChanged("PCC")
-                            _instrument.NotifyPropertyChanged("CPC")
-                            _instrument.NotifyPropertyChanged("PTR")
-                            _instrument.NotifyPropertyChanged("CTR")
+                            _instrument.NotifyPropertyChanged("OIPCC")
+                            _instrument.NotifyPropertyChanged("OICPC")
+                            _instrument.NotifyPropertyChanged("OIPTR")
+                            _instrument.NotifyPropertyChanged("OICTR")
+                        End If
+
+                        Dim sumOfCallOIChange As Decimal = _instrument.CEInstrumentsPayloads.Sum(Function(x)
+                                                                                                     If CDec(x.Key) > _instrument.Close Then
+                                                                                                         Return x.Value.OI - x.Value.PreviousPayload.OI
+                                                                                                     Else
+                                                                                                         Return 0
+                                                                                                     End If
+                                                                                                 End Function)
+
+                        If _instrument.SumOfCallsOIChange = Long.MinValue OrElse _instrument.SumOfCallsOIChange <> sumOfCallOIChange Then
+                            _instrument.SumOfCallsOIChange = sumOfCallOIChange
+                            _instrument.NotifyPropertyChanged("SumOfCallsOIChange")
+                            _instrument.NotifyPropertyChanged("OIChangePCC")
+                            _instrument.NotifyPropertyChanged("OIChangeCPC")
+                            _instrument.NotifyPropertyChanged("OIChangePTR")
+                            _instrument.NotifyPropertyChanged("OIChangeCTR")
                         End If
                     End If
 
@@ -167,7 +215,7 @@ Public Class DataFetcher
     End Function
 
     Private Async Function GetOptionDataAsync(ByVal originatingInstrument As InstrumentDetails, ByVal optionInstrument As OptionInstrumentDetails, ByVal tradingDate As Date) As Task
-        Dim optionEodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(optionInstrument.InstrumentToken, optionInstrument.TradingSymbol, tradingDate.Date, tradingDate.Date, DataType.EOD, Nothing, _fetchDataWithAPI, _fetchDataWithoutAPI, _cts)
+        Dim optionEodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(optionInstrument.InstrumentToken, optionInstrument.TradingSymbol, tradingDate.Date.AddDays(-15), tradingDate.Date, DataType.EOD, Nothing, _fetchDataWithAPI, _fetchDataWithoutAPI, _cts)
         _cts.Token.ThrowIfCancellationRequested()
         If optionEodData IsNot Nothing AndAlso optionEodData.Count > 0 Then
             If optionInstrument.InstrumentType = "PE" Then
@@ -305,6 +353,64 @@ Public Class DataFetcher
                         ret.Add(runningSnapshotTime, runningPayload)
                         previousPayload = runningPayload
                     Next
+                End If
+            End If
+        End If
+        Return ret
+    End Function
+
+    Private Sub CalculateATR(ByVal ATRPeriod As Integer, ByVal inputPayload As Dictionary(Of Date, Payload), ByRef outputPayload As Dictionary(Of Date, Decimal))
+        If inputPayload IsNot Nothing AndAlso inputPayload.Count > 0 Then
+            Dim firstPayload As Boolean = True
+            Dim HighLow As Double = Nothing
+            Dim HighClose As Double = Nothing
+            Dim LowClose As Double = Nothing
+            Dim PreviousClose As Double = Nothing
+            Dim TR As Double = Nothing
+            Dim SumTR As Double = 0.00
+            Dim AvgTR As Double = 0.00
+            Dim counter As Integer = 0
+            outputPayload = New Dictionary(Of Date, Decimal)
+            For Each runningInputPayload In inputPayload
+                counter += 1
+                HighLow = runningInputPayload.Value.High - runningInputPayload.Value.Low
+                If firstPayload = True Then
+                    TR = HighLow
+                    firstPayload = False
+                Else
+                    HighClose = Math.Abs(runningInputPayload.Value.High - runningInputPayload.Value.PreviousPayload.Close)
+                    LowClose = Math.Abs(runningInputPayload.Value.Low - runningInputPayload.Value.PreviousPayload.Close)
+                    TR = Math.Max(HighLow, Math.Max(HighClose, LowClose))
+                End If
+                SumTR = SumTR + TR
+                If counter = ATRPeriod Then
+                    AvgTR = SumTR / ATRPeriod
+                    outputPayload.Add(runningInputPayload.Value.PayloadDate, AvgTR)
+                ElseIf counter > ATRPeriod Then
+                    AvgTR = (outputPayload(runningInputPayload.Value.PreviousPayload.PayloadDate) * (ATRPeriod - 1) + TR) / ATRPeriod
+                    outputPayload.Add(runningInputPayload.Value.PayloadDate, AvgTR)
+                Else
+                    AvgTR = SumTR / counter
+                    outputPayload.Add(runningInputPayload.Value.PayloadDate, AvgTR)
+                End If
+            Next
+        End If
+    End Sub
+
+    Private Function CalculateSlab(ByVal price As Decimal, ByVal atr As Decimal) As Decimal
+        Dim ret As Decimal = 0.25
+        Dim slabList As List(Of Decimal) = New List(Of Decimal) From {0.25, 0.5, 1, 2.5, 5, 10, 15}
+        Dim supportedSlabList As List(Of Decimal) = slabList.FindAll(Function(x)
+                                                                         Return x <= atr / 8
+                                                                     End Function)
+        If supportedSlabList IsNot Nothing AndAlso supportedSlabList.Count > 0 Then
+            ret = supportedSlabList.Max
+            If price * 1 / 100 < ret Then
+                Dim newSupportedSlabList As List(Of Decimal) = supportedSlabList.FindAll(Function(x)
+                                                                                             Return x <= price * 1 / 100
+                                                                                         End Function)
+                If newSupportedSlabList IsNot Nothing AndAlso newSupportedSlabList.Count > 0 Then
+                    ret = newSupportedSlabList.Max
                 End If
             End If
         End If

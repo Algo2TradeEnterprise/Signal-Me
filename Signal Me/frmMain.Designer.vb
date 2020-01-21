@@ -97,24 +97,24 @@ Partial Class frmMain
         'rdbFromFile
         '
         Me.rdbFromFile.AutoSize = True
-        Me.rdbFromFile.Checked = True
         Me.rdbFromFile.Location = New System.Drawing.Point(201, 24)
         Me.rdbFromFile.Margin = New System.Windows.Forms.Padding(3, 2, 3, 2)
         Me.rdbFromFile.Name = "rdbFromFile"
         Me.rdbFromFile.Size = New System.Drawing.Size(87, 21)
         Me.rdbFromFile.TabIndex = 2
-        Me.rdbFromFile.TabStop = True
         Me.rdbFromFile.Text = "From File"
         Me.rdbFromFile.UseVisualStyleBackColor = True
         '
         'rdbWithoutAPI
         '
         Me.rdbWithoutAPI.AutoSize = True
+        Me.rdbWithoutAPI.Checked = True
         Me.rdbWithoutAPI.Location = New System.Drawing.Point(93, 24)
         Me.rdbWithoutAPI.Margin = New System.Windows.Forms.Padding(3, 2, 3, 2)
         Me.rdbWithoutAPI.Name = "rdbWithoutAPI"
         Me.rdbWithoutAPI.Size = New System.Drawing.Size(102, 21)
         Me.rdbWithoutAPI.TabIndex = 1
+        Me.rdbWithoutAPI.TabStop = True
         Me.rdbWithoutAPI.Text = "Without API"
         Me.rdbWithoutAPI.UseVisualStyleBackColor = True
         '
@@ -132,7 +132,7 @@ Partial Class frmMain
         'btnStop
         '
         Me.btnStop.Anchor = CType((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.btnStop.Location = New System.Drawing.Point(813, 16)
+        Me.btnStop.Location = New System.Drawing.Point(994, 16)
         Me.btnStop.Margin = New System.Windows.Forms.Padding(3, 2, 3, 2)
         Me.btnStop.Name = "btnStop"
         Me.btnStop.Size = New System.Drawing.Size(139, 39)
@@ -143,7 +143,7 @@ Partial Class frmMain
         'btnStart
         '
         Me.btnStart.Anchor = CType((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.btnStart.Location = New System.Drawing.Point(661, 17)
+        Me.btnStart.Location = New System.Drawing.Point(842, 17)
         Me.btnStart.Margin = New System.Windows.Forms.Padding(3, 2, 3, 2)
         Me.btnStart.Name = "btnStart"
         Me.btnStart.Size = New System.Drawing.Size(145, 39)
@@ -157,7 +157,7 @@ Partial Class frmMain
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.lblProgress.Location = New System.Drawing.Point(0, 581)
         Me.lblProgress.Name = "lblProgress"
-        Me.lblProgress.Size = New System.Drawing.Size(960, 44)
+        Me.lblProgress.Size = New System.Drawing.Size(1141, 44)
         Me.lblProgress.TabIndex = 31
         Me.lblProgress.Text = "Progress Status"
         '
@@ -167,7 +167,7 @@ Partial Class frmMain
         'dtpckrTradingDate
         '
         Me.dtpckrTradingDate.Format = System.Windows.Forms.DateTimePickerFormat.[Short]
-        Me.dtpckrTradingDate.Location = New System.Drawing.Point(49, 72)
+        Me.dtpckrTradingDate.Location = New System.Drawing.Point(705, 26)
         Me.dtpckrTradingDate.Margin = New System.Windows.Forms.Padding(3, 2, 3, 2)
         Me.dtpckrTradingDate.Name = "dtpckrTradingDate"
         Me.dtpckrTradingDate.Size = New System.Drawing.Size(108, 22)
@@ -176,7 +176,7 @@ Partial Class frmMain
         'lblFromDate
         '
         Me.lblFromDate.AutoSize = True
-        Me.lblFromDate.Location = New System.Drawing.Point(5, 74)
+        Me.lblFromDate.Location = New System.Drawing.Point(661, 28)
         Me.lblFromDate.Name = "lblFromDate"
         Me.lblFromDate.Size = New System.Drawing.Size(42, 17)
         Me.lblFromDate.TabIndex = 33
@@ -198,7 +198,7 @@ Partial Class frmMain
         Me.sfdgvMain.Margin = New System.Windows.Forms.Padding(4)
         Me.sfdgvMain.Name = "sfdgvMain"
         Me.sfdgvMain.PasteOption = Syncfusion.WinForms.DataGrid.Enums.PasteOptions.None
-        Me.sfdgvMain.Size = New System.Drawing.Size(957, 478)
+        Me.sfdgvMain.Size = New System.Drawing.Size(1138, 478)
         Me.sfdgvMain.TabIndex = 35
         Me.sfdgvMain.Text = "SfDataGrid1"
         '
@@ -206,7 +206,7 @@ Partial Class frmMain
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(8.0!, 16.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(963, 629)
+        Me.ClientSize = New System.Drawing.Size(1144, 629)
         Me.Controls.Add(Me.sfdgvMain)
         Me.Controls.Add(Me.dtpckrTradingDate)
         Me.Controls.Add(Me.lblFromDate)
