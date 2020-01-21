@@ -420,7 +420,7 @@ Public Class frmMain
                         csv.GetCSVFromDataTable(dt)
                     End Using
                     OnHeartbeat("Waiting for next iteration")
-                    Await Task.Delay(120000).ConfigureAwait(False)
+                    Await Task.Delay(120000, canceller.Token).ConfigureAwait(False)
                 End While
             End If
         Catch cex As OperationCanceledException
@@ -611,7 +611,8 @@ Public Class frmMain
                 Next
                 If allStock IsNot Nothing AndAlso allStock.Count > 0 Then
                     Dim dummyInstrumentList As List(Of String) = New List(Of String) From {
-                        "SRF", "BALKRISIND", "COLPAL", "HINDUNILVR", "BHARTIARTL", "ESCORTS", "BERGEPAINT", "DLF", "TATACHEM", "NIFTY", "BANKNIFTY"
+                        "SRF", "BALKRISIND", "COLPAL", "HINDUNILVR", "BHARTIARTL", "ESCORTS", "BERGEPAINT", "DLF",
+                        "TATACHEM", "NIFTY", "BANKNIFTY", "KOTAKBANK", "JUSTDIAL", "UJJIVAN", "JINDALSTEL", "RBLBANK", "AMARAJABAT"
                     }
 
                     For Each runningStock In allStock
