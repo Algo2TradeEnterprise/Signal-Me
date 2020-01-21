@@ -195,11 +195,11 @@ Partial Class frmMain
             Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
         Me.sfdgvMain.AutoGenerateColumnsMode = Syncfusion.WinForms.DataGrid.Enums.AutoGenerateColumnsMode.SmartReset
         Me.sfdgvMain.AutoSizeColumnsMode = Syncfusion.WinForms.DataGrid.Enums.AutoSizeColumnsMode.AllCells
-        Me.sfdgvMain.Location = New System.Drawing.Point(3, 99)
+        Me.sfdgvMain.Location = New System.Drawing.Point(3, 73)
         Me.sfdgvMain.Margin = New System.Windows.Forms.Padding(4)
         Me.sfdgvMain.Name = "sfdgvMain"
         Me.sfdgvMain.PasteOption = Syncfusion.WinForms.DataGrid.Enums.PasteOptions.None
-        Me.sfdgvMain.Size = New System.Drawing.Size(1445, 478)
+        Me.sfdgvMain.Size = New System.Drawing.Size(1445, 504)
         Me.sfdgvMain.TabIndex = 35
         Me.sfdgvMain.Text = "SfDataGrid1"
         '

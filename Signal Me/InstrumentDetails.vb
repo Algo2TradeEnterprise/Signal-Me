@@ -1,8 +1,13 @@
-﻿Imports System.ComponentModel
+﻿Imports NLog
+Imports System.ComponentModel
 Imports System.ComponentModel.DataAnnotations
 
 Public Class InstrumentDetails
     Implements INotifyPropertyChanged
+
+#Region "Logging and Status Progress"
+    Public Shared logger As Logger = LogManager.GetCurrentClassLogger
+#End Region
 
     Public Event PropertyChanged As PropertyChangedEventHandler Implements INotifyPropertyChanged.PropertyChanged
 
@@ -13,8 +18,20 @@ Public Class InstrumentDetails
     <Display(Name:="Instrument Name", Order:=0, AutoGenerateField:=True)>
     Public Property OriginatingInstrument As String
 
+    Private _LastUpdateTime As Date
     <Display(Name:="Last Update Time", Order:=1, AutoGenerateField:=True)>
     Public Property LastUpdateTime As Date
+        Get
+            Return _LastUpdateTime
+        End Get
+        Set(value As Date)
+            If _LastUpdateTime <> value Then
+                _LastUpdateTime = value
+
+                logger.Fatal(Me.ToString)
+            End If
+        End Set
+    End Property
 
     <Display(Name:="LTP", Order:=2, AutoGenerateField:=True)>
     Public Property LTP As Decimal
@@ -177,5 +194,13 @@ Public Class InstrumentDetails
     <System.ComponentModel.Browsable(False)>
     Public Property CEInstrumentsPayloads As Concurrent.ConcurrentDictionary(Of String, Payload)
 #End Region
+
+    Public Overrides Function ToString() As String
+        Return String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15},{16},{17},{18},{19},{20},{21},{22},{23},{24}",
+                             Me.OriginatingInstrument, Me.LastUpdateTime.ToString("HH:mm:ss"), Me.LTP, Me.ChangePer, Me.ATR, Me.Slab,
+                             Me.SumOfPutsOI, Me.SumOfCallsOI, Me.OICPC, Me.OIPCC, Me.OICTR, Me.OIPTR, "",
+                             Me.SumOfPutsOIChange, Me.SumOfCallsOIChange, Me.OIChangeCPC, Me.OIChangePCC, Me.OIChangeCTR, Me.OIChangePTR, "",
+                             Me.Open, Me.Low, Me.High, Me.Close, Me.Volume)
+    End Function
 
 End Class

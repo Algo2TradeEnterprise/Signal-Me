@@ -54,6 +54,10 @@
     <Reference Include="KiteConnect">
       <HintPath>..\packages\KiteConnect.dll</HintPath>
     </Reference>
+    <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\Utilities\bin\Debug\NLog.dll</HintPath>
+    </Reference>
     <Reference Include="Syncfusion.Core.WinForms">
       <HintPath>..\..\Algo2Trade GoLive\Syncfusion\4.6\Syncfusion.Core.WinForms.dll</HintPath>
     </Reference>
