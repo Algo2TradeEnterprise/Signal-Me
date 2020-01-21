@@ -6,6 +6,7 @@ Imports System.ComponentModel
 Imports Syncfusion.WinForms.DataGrid
 Imports Syncfusion.WinForms.DataGrid.Events
 Imports Syncfusion.WinForms.Input.Enums
+Imports NLog
 
 Public Class frmMain
 
@@ -250,6 +251,10 @@ Public Class frmMain
     End Sub
 #End Region
 
+#Region "Logging and Status Progress"
+    Public Shared logger As Logger = LogManager.GetCurrentClassLogger
+#End Region
+
     Private canceller As CancellationTokenSource
 
     Private Sub sfdgvMain_AutoGeneratingColumn(sender As Object, e As AutoGeneratingColumnArgs) Handles sfdgvMain.AutoGeneratingColumn
@@ -322,6 +327,13 @@ Public Class frmMain
         rdbWithoutAPI.Checked = My.Settings.WithoutAPI
         rdbFromFile.Checked = My.Settings.FromFile
         txtFilePath.Text = My.Settings.FilePath
+
+        Dim columnNames As String = String.Format("{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15},{16},{17},{18},{19},{20},{21},{22},{23},{24}",
+                                                 "Instrument Name", "LastUpdateTime", "LTP", "Change %", "ATR %", "Slab",
+                                                 "SumOfPutsOI", "SumOfCallsOI", "OICPC %", "OIPCC %", "OICTR %", "OIPTR %", "",
+                                                 "SumOfPutsOIChange", "SumOfCallsOIChange", "OIChangeCPC %", "OIChangePCC %", "OIChangeCTR %", "OIChangePTR %", "",
+                                                 "Open", "Low", "High", "Close", "Volume")
+        logger.Fatal(columnNames)
     End Sub
 
     Private Async Sub btnStart_Click(sender As Object, e As EventArgs) Handles btnStart.Click

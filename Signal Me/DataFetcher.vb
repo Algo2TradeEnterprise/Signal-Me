@@ -94,7 +94,7 @@ Public Class DataFetcher
                     If atrPayload IsNot Nothing AndAlso atrPayload.ContainsKey(eodData.LastOrDefault.Value.PreviousPayload.PayloadDate) Then
                         Dim atr As Decimal = atrPayload(eodData.LastOrDefault.Value.PreviousPayload.PayloadDate)
 
-                        _instrument.ATR = (atr / _instrument.Open) * 100
+                        _instrument.ATR = Math.Round((atr / _instrument.Open) * 100, 2)
                         _instrument.NotifyPropertyChanged("ATR")
 
                         _instrument.Slab = CalculateSlab(_instrument.Open, atr)
@@ -230,10 +230,10 @@ Public Class DataFetcher
         If optionEodData IsNot Nothing AndAlso optionEodData.Count > 0 Then
             If optionInstrument.InstrumentType = "PE" Then
                 If originatingInstrument.PEInstrumentsPayloads Is Nothing Then originatingInstrument.PEInstrumentsPayloads = New Concurrent.ConcurrentDictionary(Of String, Payload)
-                originatingInstrument.PEInstrumentsPayloads.TryAdd(optionInstrument.StrikePrice, optionEodData.Values.LastOrDefault)
+                originatingInstrument.PEInstrumentsPayloads.AddOrUpdate(optionInstrument.StrikePrice, optionEodData.Values.LastOrDefault, Function(key, value) optionEodData.Values.LastOrDefault)
             ElseIf optionInstrument.InstrumentType = "CE" Then
                 If originatingInstrument.CEInstrumentsPayloads Is Nothing Then originatingInstrument.CEInstrumentsPayloads = New Concurrent.ConcurrentDictionary(Of String, Payload)
-                originatingInstrument.CEInstrumentsPayloads.TryAdd(optionInstrument.StrikePrice, optionEodData.Values.LastOrDefault)
+                originatingInstrument.CEInstrumentsPayloads.AddOrUpdate(optionInstrument.StrikePrice, optionEodData.Values.LastOrDefault, Function(key, value) optionEodData.Values.LastOrDefault)
             End If
         End If
     End Function
