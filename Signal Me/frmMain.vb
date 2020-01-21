@@ -609,7 +609,7 @@ Public Class frmMain
                 Next
                 If allStock IsNot Nothing AndAlso allStock.Count > 0 Then
                     Dim dummyInstrumentList As List(Of String) = New List(Of String) From {
-                        "SRF", "BALKRISIND", "COLAPL", "HUNDUNILVR", "BHARTIARTL", "ESCORTS", "BERGEPAINT", "DLF", "TATACHEM", "NIFTY", "BANKNIFTY"
+                        "SRF", "BALKRISIND", "COLPAL", "HINDUNILVR", "BHARTIARTL", "ESCORTS", "BERGEPAINT", "DLF", "TATACHEM", "NIFTY", "BANKNIFTY"
                     }
 
                     For Each runningStock In allStock
