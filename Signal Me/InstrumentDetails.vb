@@ -71,7 +71,7 @@ Public Class InstrumentDetails
     <Display(Name:="Sum of Calls OI", Order:=14, AutoGenerateField:=True)>
     Public Property SumOfCallsOI As Decimal
 
-    <Display(Name:="CPC %", Order:=15, AutoGenerateField:=True)>
+    <Display(Name:="CPC %", Order:=16, AutoGenerateField:=True)>
     Public ReadOnly Property CPC As Decimal
         Get
             If SumOfCallsOI <> Decimal.MinValue AndAlso SumOfPutsOI <> Decimal.MinValue AndAlso SumOfPutsOI <> 0 Then
@@ -82,7 +82,7 @@ Public Class InstrumentDetails
         End Get
     End Property
 
-    <Display(Name:="PCC %", Order:=16, AutoGenerateField:=True)>
+    <Display(Name:="PCC %", Order:=15, AutoGenerateField:=True)>
     Public ReadOnly Property PCC As Decimal
         Get
             If SumOfCallsOI <> Decimal.MinValue AndAlso SumOfPutsOI <> Decimal.MinValue AndAlso SumOfCallsOI <> 0 Then
@@ -93,7 +93,7 @@ Public Class InstrumentDetails
         End Get
     End Property
 
-    <Display(Name:="CTR %", Order:=17, AutoGenerateField:=True)>
+    <Display(Name:="CTR %", Order:=18, AutoGenerateField:=True)>
     Public ReadOnly Property CTR As Decimal
         Get
             If SumOfCallsOI <> Decimal.MinValue AndAlso SumOfPutsOI <> Decimal.MinValue AndAlso (SumOfCallsOI + SumOfPutsOI) <> 0 Then
@@ -104,7 +104,7 @@ Public Class InstrumentDetails
         End Get
     End Property
 
-    <Display(Name:="PTR %", Order:=18, AutoGenerateField:=True)>
+    <Display(Name:="PTR %", Order:=17, AutoGenerateField:=True)>
     Public ReadOnly Property PTR As Decimal
         Get
             If SumOfCallsOI <> Decimal.MinValue AndAlso SumOfPutsOI <> Decimal.MinValue AndAlso (SumOfCallsOI + SumOfPutsOI) <> 0 Then

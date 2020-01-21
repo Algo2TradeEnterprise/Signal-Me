@@ -35,12 +35,12 @@ Partial Class frmMain
         Me.btnStart = New System.Windows.Forms.Button()
         Me.lblProgress = New System.Windows.Forms.Label()
         Me.opnFile = New System.Windows.Forms.OpenFileDialog()
-        Me.dgvMain = New System.Windows.Forms.DataGridView()
         Me.dtpckrTradingDate = New System.Windows.Forms.DateTimePicker()
         Me.lblFromDate = New System.Windows.Forms.Label()
+        Me.sfdgvMain = New Syncfusion.WinForms.DataGrid.SfDataGrid()
         Me.grpMode.SuspendLayout()
         Me.pnlFileBrowse.SuspendLayout()
-        CType(Me.dgvMain, System.ComponentModel.ISupportInitialize).BeginInit()
+        CType(Me.sfdgvMain, System.ComponentModel.ISupportInitialize).BeginInit()
         Me.SuspendLayout()
         '
         'grpMode
@@ -164,23 +164,6 @@ Partial Class frmMain
         'opnFile
         '
         '
-        'dgvMain
-        '
-        Me.dgvMain.AllowUserToAddRows = False
-        Me.dgvMain.AllowUserToDeleteRows = False
-        Me.dgvMain.Anchor = CType((((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Bottom) _
-            Or System.Windows.Forms.AnchorStyles.Left) _
-            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
-        Me.dgvMain.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize
-        Me.dgvMain.Location = New System.Drawing.Point(3, 98)
-        Me.dgvMain.Name = "dgvMain"
-        Me.dgvMain.ReadOnly = True
-        Me.dgvMain.RowHeadersVisible = False
-        Me.dgvMain.RowTemplate.Height = 24
-        Me.dgvMain.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect
-        Me.dgvMain.Size = New System.Drawing.Size(957, 470)
-        Me.dgvMain.TabIndex = 32
-        '
         'dtpckrTradingDate
         '
         Me.dtpckrTradingDate.Format = System.Windows.Forms.DateTimePickerFormat.[Short]
@@ -199,14 +182,34 @@ Partial Class frmMain
         Me.lblFromDate.TabIndex = 33
         Me.lblFromDate.Text = "Date:"
         '
+        'sfdgvMain
+        '
+        Me.sfdgvMain.AccessibleName = "Table"
+        Me.sfdgvMain.AllowDraggingColumns = True
+        Me.sfdgvMain.AllowEditing = False
+        Me.sfdgvMain.AllowFiltering = True
+        Me.sfdgvMain.AllowResizingColumns = True
+        Me.sfdgvMain.Anchor = CType((((System.Windows.Forms.AnchorStyles.Top Or System.Windows.Forms.AnchorStyles.Bottom) _
+            Or System.Windows.Forms.AnchorStyles.Left) _
+            Or System.Windows.Forms.AnchorStyles.Right), System.Windows.Forms.AnchorStyles)
+        Me.sfdgvMain.AutoGenerateColumnsMode = Syncfusion.WinForms.DataGrid.Enums.AutoGenerateColumnsMode.SmartReset
+        Me.sfdgvMain.AutoSizeColumnsMode = Syncfusion.WinForms.DataGrid.Enums.AutoSizeColumnsMode.AllCells
+        Me.sfdgvMain.Location = New System.Drawing.Point(3, 99)
+        Me.sfdgvMain.Margin = New System.Windows.Forms.Padding(4)
+        Me.sfdgvMain.Name = "sfdgvMain"
+        Me.sfdgvMain.PasteOption = Syncfusion.WinForms.DataGrid.Enums.PasteOptions.None
+        Me.sfdgvMain.Size = New System.Drawing.Size(957, 478)
+        Me.sfdgvMain.TabIndex = 35
+        Me.sfdgvMain.Text = "SfDataGrid1"
+        '
         'frmMain
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(8.0!, 16.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(963, 629)
+        Me.Controls.Add(Me.sfdgvMain)
         Me.Controls.Add(Me.dtpckrTradingDate)
         Me.Controls.Add(Me.lblFromDate)
-        Me.Controls.Add(Me.dgvMain)
         Me.Controls.Add(Me.lblProgress)
         Me.Controls.Add(Me.btnStop)
         Me.Controls.Add(Me.btnStart)
@@ -219,7 +222,7 @@ Partial Class frmMain
         Me.grpMode.PerformLayout()
         Me.pnlFileBrowse.ResumeLayout(False)
         Me.pnlFileBrowse.PerformLayout()
-        CType(Me.dgvMain, System.ComponentModel.ISupportInitialize).EndInit()
+        CType(Me.sfdgvMain, System.ComponentModel.ISupportInitialize).EndInit()
         Me.ResumeLayout(False)
         Me.PerformLayout()
 
@@ -237,7 +240,7 @@ Partial Class frmMain
     Friend WithEvents btnBrowse As Button
     Friend WithEvents txtFilePath As TextBox
     Friend WithEvents Label1 As Label
-    Friend WithEvents dgvMain As DataGridView
     Friend WithEvents dtpckrTradingDate As DateTimePicker
     Friend WithEvents lblFromDate As Label
+    Friend WithEvents sfdgvMain As Syncfusion.WinForms.DataGrid.SfDataGrid
 End Class

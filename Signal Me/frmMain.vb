@@ -3,10 +3,45 @@ Imports System.IO
 Imports Utilities.DAL
 Imports System.Text.RegularExpressions
 Imports System.ComponentModel
+Imports Syncfusion.WinForms.DataGrid
+Imports Syncfusion.WinForms.DataGrid.Events
+Imports Syncfusion.WinForms.Input.Enums
 
 Public Class frmMain
 
 #Region "Common Delegates"
+    Delegate Sub SetSFGridDataBind_Delegate(ByVal [grd] As SfDataGrid, ByVal [value] As Object)
+    Public Async Sub SetSFGridDataBind_ThreadSafe(ByVal [grd] As Syncfusion.WinForms.DataGrid.SfDataGrid, ByVal [value] As Object)
+        ' InvokeRequired required compares the thread ID of the calling thread to the thread ID of the creating thread.  
+        ' If these threads are different, it returns true.  
+        If [grd].InvokeRequired Then
+            Dim MyDelegate As New SetSFGridDataBind_Delegate(AddressOf SetSFGridDataBind_ThreadSafe)
+            Me.Invoke(MyDelegate, New Object() {[grd], [value]})
+        Else
+            While True
+                Try
+                    [grd].DataSource = [value]
+                    Exit While
+                Catch sop As System.InvalidOperationException
+                End Try
+                Await Task.Delay(500, canceller.Token).ConfigureAwait(False)
+            End While
+        End If
+    End Sub
+
+    Delegate Sub SetSFGridFreezFirstColumn_Delegate(ByVal [grd] As SfDataGrid)
+    Public Sub SetSFGridFreezFirstColumn_ThreadSafe(ByVal [grd] As Syncfusion.WinForms.DataGrid.SfDataGrid)
+        ' InvokeRequired required compares the thread ID of the calling thread to the thread ID of the creating thread.  
+        ' If these threads are different, it returns true.  
+        If [grd].InvokeRequired Then
+            Dim MyDelegate As New SetSFGridFreezFirstColumn_Delegate(AddressOf SetSFGridFreezFirstColumn_ThreadSafe)
+            Me.Invoke(MyDelegate, New Object() {[grd]})
+        Else
+            [grd].FrozenColumnCount = 1
+            'Await Task.Delay(500).ConfigureAwait(False)
+        End If
+    End Sub
+
     Delegate Sub SetObjectEnableDisable_Delegate(ByVal [obj] As Object, ByVal [value] As Boolean)
     Public Sub SetObjectEnableDisable_ThreadSafe(ByVal [obj] As Object, ByVal [value] As Boolean)
         ' InvokeRequired required compares the thread ID of the calling thread to the thread ID of the creating thread.  
@@ -304,7 +339,8 @@ Public Class frmMain
             workableStockList = GetDummyInstrumentList()
             If workableStockList IsNot Nothing AndAlso workableStockList.Count > 0 Then
                 Dim dashboardList As BindingList(Of InstrumentDetails) = New BindingList(Of InstrumentDetails)(workableStockList)
-                SetDatagridBind_ThreadSafe(dgvMain, dashboardList)
+                SetSFGridDataBind_ThreadSafe(sfdgvMain, dashboardList)
+                SetSFGridFreezFirstColumn_ThreadSafe(sfdgvMain)
 
                 Dim tasks As List(Of Task) = New List(Of Task)
                 For Each runningStock In workableStockList
@@ -513,4 +549,36 @@ Public Class frmMain
 
         Return ret
     End Function
+
+    Private Sub sfdgvMain_AutoGeneratingColumn(sender As Object, e As Events.AutoGeneratingColumnArgs) Handles sfdgvMain.AutoGeneratingColumn
+        Dim eAutoGeneratingColumnArgsCommon As AutoGeneratingColumnArgs = e
+
+        sfdgvMain.Style.HeaderStyle.BackColor = Color.DeepSkyBlue
+        sfdgvMain.Style.HeaderStyle.TextColor = Color.White
+
+        sfdgvMain.Style.CheckBoxStyle.CheckedBackColor = Color.White
+        sfdgvMain.Style.CheckBoxStyle.CheckedTickColor = Color.LightSkyBlue
+        If eAutoGeneratingColumnArgsCommon.Column.CellType = "DateTime" Then
+            CType(eAutoGeneratingColumnArgsCommon.Column, GridDateTimeColumn).Pattern = DateTimePattern.SortableDateTime
+        End If
+    End Sub
+
+    Private Sub sfdgvMain_FilterPopupShowing(sender As Object, e As Events.FilterPopupShowingEventArgs) Handles sfdgvMain.FilterPopupShowing
+        Dim eFilterPopupShowingEventArgsCommon As FilterPopupShowingEventArgs = e
+
+        eFilterPopupShowingEventArgsCommon.Control.BackColor = ColorTranslator.FromHtml("#EDF3F3")
+
+        'Customize the appearance of the CheckedListBox
+
+        sfdgvMain.Style.CheckBoxStyle.CheckedBackColor = Color.White
+        sfdgvMain.Style.CheckBoxStyle.CheckedTickColor = Color.LightSkyBlue
+        eFilterPopupShowingEventArgsCommon.Control.CheckListBox.Style.CheckBoxStyle.CheckedBackColor = Color.White
+        eFilterPopupShowingEventArgsCommon.Control.CheckListBox.Style.CheckBoxStyle.CheckedTickColor = Color.LightSkyBlue
+
+        'Customize the appearance of the Ok and Cancel buttons
+        eFilterPopupShowingEventArgsCommon.Control.CancelButton.BackColor = Color.DeepSkyBlue
+        eFilterPopupShowingEventArgsCommon.Control.OkButton.BackColor = eFilterPopupShowingEventArgsCommon.Control.CancelButton.BackColor
+        eFilterPopupShowingEventArgsCommon.Control.CancelButton.ForeColor = Color.White
+        eFilterPopupShowingEventArgsCommon.Control.OkButton.ForeColor = eFilterPopupShowingEventArgsCommon.Control.CancelButton.ForeColor
+    End Sub
 End Class
