@@ -370,6 +370,7 @@ Public Class frmMain
                 Next
             End If
             'workableStockList = GetDummyInstrumentList()
+            OnHeartbeat("Processing Data")
             If workableStockList IsNot Nothing AndAlso workableStockList.Count > 0 Then
                 Dim dashboardList As BindingList(Of InstrumentDetails) = New BindingList(Of InstrumentDetails)(workableStockList)
                 SetSFGridDataBind_ThreadSafe(sfdgvMain, dashboardList)
