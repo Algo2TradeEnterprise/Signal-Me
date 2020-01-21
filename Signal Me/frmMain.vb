@@ -414,11 +414,13 @@ Public Class frmMain
                             dt.Rows.Add(row)
                         End If
                     Next
+                    OnHeartbeat("Writing csv")
                     SetDatagridBindDatatable_ThreadSafe(dgvMain, dt)
                     Using csv As New CSVHelper(Path.Combine(My.Application.Info.DirectoryPath, "Output.csv"), ",", canceller)
                         csv.GetCSVFromDataTable(dt)
                     End Using
-                    Await Task.Delay(2000).ConfigureAwait(False)
+                    OnHeartbeat("Waiting for next iteration")
+                    Await Task.Delay(120000).ConfigureAwait(False)
                 End While
             End If
         Catch cex As OperationCanceledException
