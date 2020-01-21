@@ -82,7 +82,8 @@ Public Class DataFetcher
                         _instrument.NotifyPropertyChanged("LTP")
                         _instrument.NotifyPropertyChanged("ChangePer")
                     End If
-                    If _instrument.PreviousClose = Decimal.MinValue OrElse _instrument.PreviousClose <> eodData.LastOrDefault.Value.PreviousPayload.Close Then
+                    If (_instrument.PreviousClose = Decimal.MinValue OrElse _instrument.PreviousClose <> eodData.LastOrDefault.Value.PreviousPayload.Close) AndAlso
+                        eodData.LastOrDefault.Value.PreviousPayload IsNot Nothing Then
                         _instrument.PreviousClose = eodData.LastOrDefault.Value.PreviousPayload.Close
                         _instrument.NotifyPropertyChanged("PreviousClose")
                     End If
@@ -151,7 +152,11 @@ Public Class DataFetcher
 
                         Dim sumOfPutOIChange As Decimal = _instrument.PEInstrumentsPayloads.Sum(Function(x)
                                                                                                     If CDec(x.Key) < _instrument.Close Then
-                                                                                                        Return x.Value.OI - x.Value.PreviousPayload.OI
+                                                                                                        If x.Value.PreviousPayload IsNot Nothing Then
+                                                                                                            Return x.Value.OI - x.Value.PreviousPayload.OI
+                                                                                                        Else
+                                                                                                            Return x.Value.OI
+                                                                                                        End If
                                                                                                     Else
                                                                                                         Return 0
                                                                                                     End If
@@ -187,7 +192,11 @@ Public Class DataFetcher
 
                         Dim sumOfCallOIChange As Decimal = _instrument.CEInstrumentsPayloads.Sum(Function(x)
                                                                                                      If CDec(x.Key) > _instrument.Close Then
-                                                                                                         Return x.Value.OI - x.Value.PreviousPayload.OI
+                                                                                                         If x.Value.PreviousPayload IsNot Nothing Then
+                                                                                                             Return x.Value.OI - x.Value.PreviousPayload.OI
+                                                                                                         Else
+                                                                                                             Return x.Value.OI
+                                                                                                         End If
                                                                                                      Else
                                                                                                          Return 0
                                                                                                      End If
