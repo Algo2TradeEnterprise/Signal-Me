@@ -312,6 +312,7 @@ Public Class frmMain
             End If
             If workableStockList IsNot Nothing AndAlso workableStockList.Count > 0 Then
                 Dim dt As DataTable = New DataTable
+                dt.Columns.Add("Time")
                 dt.Columns.Add("Intrument")
                 dt.Columns.Add("Open")
                 dt.Columns.Add("Low")
@@ -327,91 +328,98 @@ Public Class frmMain
                 dt.Columns.Add("PTR %")
                 dt.Columns.Add("CTR %")
 
-                Dim ctr As Integer = 0
-                For Each runningStock In workableStockList
-                    ctr += 1
-                    OnHeartbeat(String.Format("Processing data for {0}. #{1}/{2}", runningStock.OriginatingInstrument, ctr, workableStockList.Count))
-                    Dim eodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(runningStock.CashInstrumentToken, runningStock.CashTradingSymbol, tradingDate.Date.AddDays(-15), tradingDate.Date, DataType.EOD, Nothing)
-                    If eodData IsNot Nothing AndAlso eodData.Count > 0 Then
-                        runningStock.Open = eodData.LastOrDefault.Value.Open
-                        runningStock.Low = eodData.LastOrDefault.Value.Low
-                        runningStock.High = eodData.LastOrDefault.Value.High
-                        runningStock.Close = eodData.LastOrDefault.Value.Close
-                        runningStock.Volume = eodData.LastOrDefault.Value.Volume
-                        runningStock.LTP = eodData.LastOrDefault.Value.Close
-                        runningStock.PreviousClose = eodData.LastOrDefault.Value.PreviousPayload.Close
+                While True
+                    Dim time As Date = Now
+                    Dim ctr As Integer = 0
+                    For Each runningStock In workableStockList
+                        ctr += 1
+                        OnHeartbeat(String.Format("Processing data for {0}. #{1}/{2}", runningStock.OriginatingInstrument, ctr, workableStockList.Count))
+                        Dim eodData As Dictionary(Of Date, Payload) = Await GetHistoricalDataAsync(runningStock.CashInstrumentToken, runningStock.CashTradingSymbol, tradingDate.Date.AddDays(-15), tradingDate.Date, DataType.EOD, Nothing)
+                        If eodData IsNot Nothing AndAlso eodData.Count > 0 Then
+                            runningStock.Open = eodData.LastOrDefault.Value.Open
+                            runningStock.Low = eodData.LastOrDefault.Value.Low
+                            runningStock.High = eodData.LastOrDefault.Value.High
+                            runningStock.Close = eodData.LastOrDefault.Value.Close
+                            runningStock.Volume = eodData.LastOrDefault.Value.Volume
+                            runningStock.LTP = eodData.LastOrDefault.Value.Close
+                            runningStock.PreviousClose = eodData.LastOrDefault.Value.PreviousPayload.Close
 
-                        If runningStock.OptionInstruments IsNot Nothing AndAlso runningStock.OptionInstruments.Count > 0 Then
-                            Try
-                                For i As Integer = 0 To runningStock.OptionInstruments.Count - 1 Step 100
-                                    canceller.Token.ThrowIfCancellationRequested()
-                                    Dim numberOfData As Integer = If(runningStock.OptionInstruments.Count - i > 100, 100, runningStock.OptionInstruments.Count - i)
-                                    Dim tasks As IEnumerable(Of Task(Of Boolean)) = Nothing
-                                    tasks = runningStock.OptionInstruments.Values.ToList.GetRange(i, numberOfData).Select(Async Function(x)
-                                                                                                                              Try
-                                                                                                                                  Await GetDataAsync(runningStock, x, tradingDate).ConfigureAwait(False)
-                                                                                                                              Catch ex As Exception
-                                                                                                                                  Throw ex
-                                                                                                                              End Try
-                                                                                                                              Return True
-                                                                                                                          End Function)
+                            If runningStock.OptionInstruments IsNot Nothing AndAlso runningStock.OptionInstruments.Count > 0 Then
+                                Try
+                                    For i As Integer = 0 To runningStock.OptionInstruments.Count - 1 Step 100
+                                        canceller.Token.ThrowIfCancellationRequested()
+                                        Dim numberOfData As Integer = If(runningStock.OptionInstruments.Count - i > 100, 100, runningStock.OptionInstruments.Count - i)
+                                        Dim tasks As IEnumerable(Of Task(Of Boolean)) = Nothing
+                                        tasks = runningStock.OptionInstruments.Values.ToList.GetRange(i, numberOfData).Select(Async Function(x)
+                                                                                                                                  Try
+                                                                                                                                      Await GetDataAsync(runningStock, x, tradingDate).ConfigureAwait(False)
+                                                                                                                                  Catch ex As Exception
+                                                                                                                                      Throw ex
+                                                                                                                                  End Try
+                                                                                                                                  Return True
+                                                                                                                              End Function)
 
-                                    Dim mainTask As Task = Task.WhenAll(tasks)
-                                    Await mainTask.ConfigureAwait(False)
-                                    If mainTask.Exception IsNot Nothing Then
-                                        Throw mainTask.Exception
-                                    End If
-                                Next
-                            Catch cex As TaskCanceledException
-                                Throw cex
-                            Catch aex As AggregateException
-                                Throw aex
-                            Catch ex As Exception
-                                Throw ex
-                            End Try
+                                        Dim mainTask As Task = Task.WhenAll(tasks)
+                                        Await mainTask.ConfigureAwait(False)
+                                        If mainTask.Exception IsNot Nothing Then
+                                            Throw mainTask.Exception
+                                        End If
+                                    Next
+                                Catch cex As TaskCanceledException
+                                    Throw cex
+                                Catch aex As AggregateException
+                                    Throw aex
+                                Catch ex As Exception
+                                    Throw ex
+                                End Try
+                            End If
+
+                            If runningStock.PEInstrumentsPayloads IsNot Nothing AndAlso runningStock.PEInstrumentsPayloads.Count > 0 Then
+                                runningStock.SumOfPutsOI = runningStock.PEInstrumentsPayloads.Sum(Function(x)
+                                                                                                      If CDec(x.Key) < runningStock.Close Then
+                                                                                                          Return x.Value.OI
+                                                                                                      Else
+                                                                                                          Return 0
+                                                                                                      End If
+                                                                                                  End Function)
+                            End If
+
+                            If runningStock.CEInstrumentsPayloads IsNot Nothing AndAlso runningStock.CEInstrumentsPayloads.Count > 0 Then
+                                runningStock.SumOfCallsOI = runningStock.CEInstrumentsPayloads.Sum(Function(x)
+                                                                                                       If CDec(x.Key) > runningStock.Close Then
+                                                                                                           Return x.Value.OI
+                                                                                                       Else
+                                                                                                           Return 0
+                                                                                                       End If
+                                                                                                   End Function)
+                            End If
+
+                            Dim row As DataRow = dt.NewRow
+                            row("Time") = time.ToString("dd-MM-yyyy HH:mm:ss")
+                            row("Intrument") = runningStock.OriginatingInstrument
+                            row("Open") = runningStock.Open
+                            row("Low") = runningStock.Low
+                            row("High") = runningStock.High
+                            row("Close") = runningStock.Close
+                            row("Volume") = runningStock.Volume
+                            row("LTP") = runningStock.LTP
+                            row("Change %") = runningStock.ChangePer
+                            row("Sum Of Puts OI") = runningStock.SumOfPutsOI
+                            row("Sum Of Calls OI") = runningStock.SumOfCallsOI
+                            row("PCC %") = runningStock.PCC
+                            row("CPC %") = runningStock.CPC
+                            row("PTR %") = runningStock.PTR
+                            row("CTR %") = runningStock.CTR
+
+                            dt.Rows.Add(row)
                         End If
-
-                        If runningStock.PEInstrumentsPayloads IsNot Nothing AndAlso runningStock.PEInstrumentsPayloads.Count > 0 Then
-                            runningStock.SumOfPutsOI = runningStock.PEInstrumentsPayloads.Sum(Function(x)
-                                                                                                  If CDec(x.Key) < runningStock.Close Then
-                                                                                                      Return x.Value.OI
-                                                                                                  Else
-                                                                                                      Return 0
-                                                                                                  End If
-                                                                                              End Function)
-                        End If
-
-                        If runningStock.CEInstrumentsPayloads IsNot Nothing AndAlso runningStock.CEInstrumentsPayloads.Count > 0 Then
-                            runningStock.SumOfCallsOI = runningStock.CEInstrumentsPayloads.Sum(Function(x)
-                                                                                                   If CDec(x.Key) > runningStock.Close Then
-                                                                                                       Return x.Value.OI
-                                                                                                   Else
-                                                                                                       Return 0
-                                                                                                   End If
-                                                                                               End Function)
-                        End If
-
-                        Dim row As DataRow = dt.NewRow
-                        row("Intrument") = runningStock.OriginatingInstrument
-                        row("Open") = runningStock.Open
-                        row("Low") = runningStock.Low
-                        row("High") = runningStock.High
-                        row("Close") = runningStock.Close
-                        row("Volume") = runningStock.Volume
-                        row("LTP") = runningStock.LTP
-                        row("Change %") = runningStock.ChangePer
-                        row("Sum Of Puts OI") = runningStock.SumOfPutsOI
-                        row("Sum Of Calls OI") = runningStock.SumOfCallsOI
-                        row("PCC %") = runningStock.PCC
-                        row("CPC %") = runningStock.CPC
-                        row("PTR %") = runningStock.PTR
-                        row("CTR %") = runningStock.CTR
-
-                        dt.Rows.Add(row)
-                    End If
-                Next
-
-                SetDatagridBindDatatable_ThreadSafe(dgvMain, dt)
+                    Next
+                    SetDatagridBindDatatable_ThreadSafe(dgvMain, dt)
+                    Using csv As New CSVHelper(Path.Combine(My.Application.Info.DirectoryPath, "Output.csv"), ",", canceller)
+                        csv.GetCSVFromDataTable(dt)
+                    End Using
+                    Await Task.Delay(2000).ConfigureAwait(False)
+                End While
             End If
         Catch cex As OperationCanceledException
             MsgBox(cex.Message)
@@ -600,10 +608,14 @@ Public Class frmMain
                     End If
                 Next
                 If allStock IsNot Nothing AndAlso allStock.Count > 0 Then
+                    Dim dummyInstrumentList As List(Of String) = New List(Of String) From {
+                        "SRF", "BALKRISIND", "COLAPL", "HUNDUNILVR", "BHARTIARTL", "ESCORTS", "BERGEPAINT", "DLF", "TATACHEM", "NIFTY", "BANKNIFTY"
+                    }
+
                     For Each runningStock In allStock
                         If ret Is Nothing Then ret = New Dictionary(Of String, Date)
                         Dim intrumentName As String = runningStock.Key.Remove(runningStock.Key.Count - 8)
-                        If Not ret.ContainsKey(intrumentName) Then
+                        If Not ret.ContainsKey(intrumentName) AndAlso dummyInstrumentList.Contains(intrumentName.ToUpper) Then
                             Dim allInstrumentDetails As IEnumerable(Of KeyValuePair(Of String, Date)) = allStock.Where(Function(x)
                                                                                                                            Return x.Key.Remove(x.Key.Count - 8) = intrumentName
                                                                                                                        End Function)
