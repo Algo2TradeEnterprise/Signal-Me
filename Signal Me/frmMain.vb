@@ -420,7 +420,7 @@ Public Class frmMain
                         csv.GetCSVFromDataTable(dt)
                     End Using
                     OnHeartbeat("Waiting for next iteration")
-                    Await Task.Delay(120000, canceller.Token).ConfigureAwait(False)
+                    Await Task.Delay(1000, canceller.Token).ConfigureAwait(False)
                 End While
             End If
         Catch cex As OperationCanceledException
