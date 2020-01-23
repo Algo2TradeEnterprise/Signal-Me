@@ -481,10 +481,65 @@ Public Class frmMain
                     End If
                 Next
                 If allStock IsNot Nothing AndAlso allStock.Count > 0 Then
+
+                    Dim atrInstrumnetList As List(Of String) = New List(Of String) From
+                        {"IBULHSGFIN",
+                        "INFRATEL",
+                        "RBLBANK",
+                        "ZEEL",
+                        "JINDALSTEL",
+                        "MFSL",
+                        "PFC",
+                        "INDUSINDBK",
+                        "PEL",
+                        "L&TFH",
+                        "MOTHERSUMI",
+                        "SRTRANSFIN",
+                        "EQUITAS",
+                        "TATAMOTORS",
+                        "CANBK",
+                        "SUNTV",
+                        "LICHSGFIN",
+                        "NMDC",
+                        "ADANIENT",
+                        "JUSTDIAL",
+                        "VEDL",
+                        "CENTURYTEX",
+                        "UJJIVAN",
+                        "GLENMARK",
+                        "HINDPETRO",
+                        "TVSMOTOR",
+                        "CHOLAFIN",
+                        "BEL",
+                        "GAIL",
+                        "CASTROLIND",
+                        "COALINDIA",
+                        "JSWSTEEL",
+                        "M&MFIN",
+                        "TATAGLOBAL",
+                        "MGL",
+                        "RECLTD",
+                        "BHARTIARTL",
+                        "INDIGO",
+                        "AUROPHARMA",
+                        "SBIN",
+                        "BPCL",
+                        "GRASIM",
+                        "APOLLOTYRE",
+                        "DLF",
+                        "IOC",
+                        "MANAPPURAM",
+                        "NIITTECH",
+                        "OIL",
+                        "TATASTEEL",
+                        "CUMMINSIND",
+                        "BHARATFORG",
+                        "MINDTREE"}
+
                     For Each runningStock In allStock
                         If ret Is Nothing Then ret = New Dictionary(Of String, Date)
                         Dim intrumentName As String = runningStock.Key.Remove(runningStock.Key.Count - 8)
-                        If Not ret.ContainsKey(intrumentName) Then
+                        If Not ret.ContainsKey(intrumentName) AndAlso atrInstrumnetList.Contains(intrumentName.ToUpper) Then
                             Dim allInstrumentDetails As IEnumerable(Of KeyValuePair(Of String, Date)) = allStock.Where(Function(x)
                                                                                                                            Return x.Key.Remove(x.Key.Count - 8) = intrumentName
                                                                                                                        End Function)
